@@ -8,6 +8,7 @@ import 'package:goapp/features/auth/presentation/theme/auth_ui_tokens.dart';
 import 'package:goapp/features/documents/presentation/pages/documents_screen.dart';
 import 'package:goapp/features/help_support/presentation/pages/help_support_screen.dart';
 import 'package:goapp/features/profile/presentation/pages/profile_screen.dart';
+import 'package:goapp/features/profile/presentation/pages/goapp_id_screen.dart';
 import 'package:goapp/features/rate_app/presentation/pages/rate_app_screen.dart';
 import 'package:goapp/features/refer_earn/presentation/pages/refer_earn_screen.dart';
 import 'package:goapp/core/theme/app_colors.dart';
@@ -41,6 +42,17 @@ class ActivationLimitedDrawer extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const DocumentsScreen()),
+                );
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.badge_outlined,
+              label: 'GoApp ID',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GoAppIdScreen()),
                 );
               },
             ),

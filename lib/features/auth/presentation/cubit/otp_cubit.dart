@@ -113,6 +113,7 @@ class OtpCubit extends Cubit<OtpState> {
     }
     emit(
       state.copyWith(
+        isLoading: true,
         submitRequested: true,
         clearSubmitError: true,
         clearErrorMessage: true,
@@ -144,6 +145,28 @@ class OtpCubit extends Cubit<OtpState> {
 
   void consumeActions() {
     emit(state.copyWith(submitRequested: false));
+  }
+
+  void handleAuthFailure(String message) {
+    emit(
+      state.copyWith(
+        isLoading: false,
+        submitRequested: false,
+        errorMessage: message,
+        clearSubmitError: true,
+      ),
+    );
+  }
+
+  void handleAuthSuccess() {
+    emit(
+      state.copyWith(
+        isLoading: false,
+        submitRequested: false,
+        clearSubmitError: true,
+        clearErrorMessage: true,
+      ),
+    );
   }
 
   @override

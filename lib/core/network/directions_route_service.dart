@@ -56,7 +56,7 @@ class DirectionsRouteService {
   }) async {
     try {
       final Response<dynamic> response = await _dio.get(
-        'https://maps.googleapis.com/maps/api/directions/json',
+        '${GoogleEndpoints.mapsBaseUrl}${GoogleEndpoints.directionsJson}',
         queryParameters: <String, dynamic>{
           'origin': '${origin.latitude},${origin.longitude}',
           'destination': '${destination.latitude},${destination.longitude}',

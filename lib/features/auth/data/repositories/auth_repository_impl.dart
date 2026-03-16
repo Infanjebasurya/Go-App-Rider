@@ -23,7 +23,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right<Failure, User>(response.user);
     } on Exception catch (e) {
-      return Left<Failure, User>(ServerFailure(e.toString()));
+      return Left<Failure, User>(ServerFailure(_normalizeMessage(e)));
     }
   }
 
@@ -33,7 +33,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final otpId = await _remoteDataSource.requestOtp(phone: phone);
       return Right<Failure, String>(otpId);
     } on Exception catch (e) {
-      return Left<Failure, String>(ServerFailure(e.toString()));
+      return Left<Failure, String>(ServerFailure(_normalizeMessage(e)));
     }
   }
 
@@ -43,7 +43,11 @@ class AuthRepositoryImpl implements AuthRepository {
       final message = await _remoteDataSource.resendOtp(phone: phone);
       return Right<Failure, String>(message);
     } on Exception catch (e) {
-      return Left<Failure, String>(ServerFailure(e.toString()));
+      return Left<Failure, String>(ServerFailure(_normalizeMessage(e)));
     }
+  }
+
+  String _normalizeMessage(Exception error) {
+    return error.toString().replaceFirst('Exception: ', '');
   }
 }

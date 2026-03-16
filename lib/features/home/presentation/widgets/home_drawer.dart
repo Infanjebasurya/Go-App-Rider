@@ -13,6 +13,7 @@ import '../../../earnings/presentation/pages/earnings_screen.dart';
 import '../../../help_support/presentation/pages/help_support_screen.dart';
 import '../../../incentives/presentation/pages/incentives_page.dart';
 import '../../../profile/presentation/pages/profile_screen.dart';
+import '../../../profile/presentation/pages/goapp_id_screen.dart';
 import '../../../rate_app/presentation/pages/rate_app_screen.dart';
 import '../../../refer_earn/presentation/pages/refer_earn_screen.dart';
 import '../../../ride_history/presentation/pages/ride_history_screen.dart';
@@ -65,6 +66,19 @@ class HomeDrawer extends StatelessWidget {
                           if (!context.mounted) return;
                           context.read<DriverCubit>().refreshDashboardMetrics();
                         });
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.badge_outlined,
+                      label: 'GoApp ID',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const GoAppIdScreen(),
+                          ),
+                        ).then((_) => onReopenDrawer());
                       },
                     ),
                     _DrawerItem(
