@@ -699,10 +699,11 @@ class _AddContactSheetState extends State<_AddContactSheet> {
                       );
 
                       final nameError = name.isEmpty ? 'Enter name' : null;
-                      final numberError = _phoneNumberService.validateIndiaMobile(
-                        rawInput: rawNumber,
-                        digits: digits,
-                      );
+                      final numberError = _phoneNumberService
+                          .validateIndiaMobile(
+                            rawInput: rawNumber,
+                            digits: digits,
+                          );
 
                       if (nameError != null || numberError != null) {
                         setState(() {

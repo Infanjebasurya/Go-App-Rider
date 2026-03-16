@@ -277,7 +277,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     final int? statusCode = error.response?.statusCode;
     final String message = _extractErrorMessage(error.response?.data);
-      if (statusCode == 400 || statusCode == 401) {
+    if (statusCode == 400 || statusCode == 401) {
       final String normalized = message.toLowerCase();
       if (normalized.contains('expired')) {
         return 'OTP expired. Please request a new OTP.';

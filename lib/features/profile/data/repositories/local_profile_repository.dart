@@ -53,8 +53,11 @@ class LocalProfileRepository implements ProfileRepository {
     }
 
     final existing = UserCacheStore.read();
-    final String dobValue = trimmedDob.isEmpty ? (existing?.dob ?? '') : trimmedDob;
-    final RegistrationProgress progress = await RegistrationProgressStore.load();
+    final String dobValue = trimmedDob.isEmpty
+        ? (existing?.dob ?? '')
+        : trimmedDob;
+    final RegistrationProgress progress =
+        await RegistrationProgressStore.load();
     final String city = (progress.cityId ?? 'Chennai').trim();
     if (city.isEmpty) {
       return const Left(ServerFailure('City is required.'));
@@ -147,7 +150,9 @@ class LocalProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> getCachedProfile() async {
     final stored = await UserCacheStore.load();
-    final Profile? localProfile = stored == null ? _cached : _fromCacheModel(stored);
+    final Profile? localProfile = stored == null
+        ? _cached
+        : _fromCacheModel(stored);
     _cached = localProfile;
 
     final String? accessToken = AuthTokenStore.accessToken();
@@ -252,10 +257,7 @@ class LocalProfileRepository implements ProfileRepository {
     );
   }
 
-  Profile _mergeProfiles({
-    required Profile remote,
-    required Profile? local,
-  }) {
+  Profile _mergeProfiles({required Profile remote, required Profile? local}) {
     return Profile(
       id: remote.id.isNotEmpty ? remote.id : (local?.id ?? ''),
       name: remote.name.isNotEmpty ? remote.name : (local?.name ?? ''),

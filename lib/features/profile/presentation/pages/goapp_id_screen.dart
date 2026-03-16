@@ -111,8 +111,7 @@ class _GoAppIdCard extends StatelessWidget {
         final double photoTop = cardWidth * 0.08;
         final double textRightInset =
             photoWidth + photoRight + (cardWidth * 0.05);
-        final double licenseTop =
-            topPadding + logoHeight + (cardWidth * 0.08);
+        final double licenseTop = topPadding + logoHeight + (cardWidth * 0.08);
         final double bottomTop = cardHeight - (cardWidth * 0.155);
 
         return Container(
@@ -261,7 +260,9 @@ class _DriverPhotoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget child;
-    if (imagePath != null && imagePath!.isNotEmpty && File(imagePath!).existsSync()) {
+    if (imagePath != null &&
+        imagePath!.isNotEmpty &&
+        File(imagePath!).existsSync()) {
       child = ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Image.file(
@@ -280,11 +281,7 @@ class _DriverPhotoCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         alignment: Alignment.center,
-        child: Icon(
-          Icons.person,
-          color: AppColors.white54,
-          size: width * 0.48,
-        ),
+        child: Icon(Icons.person, color: AppColors.white54, size: width * 0.48),
       );
     }
 
