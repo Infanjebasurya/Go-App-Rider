@@ -1,19 +1,20 @@
 import 'package:dio/dio.dart';
 
 import '../utils/env.dart';
+import 'google_endpoints.dart';
 import '../../features/search/data/models/place_suggestion_model.dart';
 
 class PlacesService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://maps.googleapis.com/maps/api/place',
+      baseUrl: GoogleEndpoints.placesBaseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ),
   );
   final Dio _geoDio = Dio(
     BaseOptions(
-      baseUrl: 'https://maps.googleapis.com/maps/api',
+      baseUrl: GoogleEndpoints.mapsApiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ),

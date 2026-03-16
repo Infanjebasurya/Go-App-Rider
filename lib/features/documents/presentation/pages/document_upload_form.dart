@@ -23,6 +23,11 @@ class _BankAccountFormState extends State<BankAccountForm> {
   late final TextEditingController _accCtrl;
   late final TextEditingController _confirmCtrl;
   late final TextEditingController _ifscCtrl;
+  late final FocusNode _nameFocus;
+  late final FocusNode _bankFocus;
+  late final FocusNode _accFocus;
+  late final FocusNode _confirmFocus;
+  late final FocusNode _ifscFocus;
   bool _obscureAccount = true;
   final GlobalKey _bankDocErrorKey = GlobalKey();
 
@@ -36,6 +41,11 @@ class _BankAccountFormState extends State<BankAccountForm> {
       text: widget.bankData.confirmAccountNumber,
     );
     _ifscCtrl = TextEditingController(text: widget.bankData.ifscCode);
+    _nameFocus = FocusNode();
+    _bankFocus = FocusNode();
+    _accFocus = FocusNode();
+    _confirmFocus = FocusNode();
+    _ifscFocus = FocusNode();
   }
 
   @override
@@ -45,6 +55,11 @@ class _BankAccountFormState extends State<BankAccountForm> {
     _accCtrl.dispose();
     _confirmCtrl.dispose();
     _ifscCtrl.dispose();
+    _nameFocus.dispose();
+    _bankFocus.dispose();
+    _accFocus.dispose();
+    _confirmFocus.dispose();
+    _ifscFocus.dispose();
     super.dispose();
   }
 
@@ -77,174 +92,202 @@ class _BankAccountFormState extends State<BankAccountForm> {
     final data = widget.bankData;
     final cubit = context.read<DocumentUploadCubit>();
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Link Bank Account',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: AppColors.headingNavy,
-              letterSpacing: -0.6,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            'Securely link your account for direct payouts',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade500,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 24),
-          _BankField(
-            label: 'Account Holder Name',
-            hint: 'Enter full name as per bank records',
-            controller: _nameCtrl,
-            errorText: data.nameError,
-            onChanged: (value) =>
-                cubit.updateAccountHolderName(value.toUpperCase()),
-            keyboardType: TextInputType.name,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z ]')),
-              _UpperCaseFormatter(),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _BankField(
-            label: 'Bank Name',
-            hint: 'Enter bank name',
-            controller: _bankCtrl,
-            errorText: data.bankNameError,
-            onChanged: (value) => cubit.updateBankName(value.toUpperCase()),
-            keyboardType: TextInputType.name,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z ]')),
-              _UpperCaseFormatter(),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _BankField(
-            label: 'Account Number',
-            hint: '•••• •••• •••• ••••',
-            controller: _accCtrl,
-            errorText: data.accountNumberError,
-            onChanged: (value) =>
-                cubit.updateAccountNumber(value.toUpperCase()),
-            keyboardType: TextInputType.number,
-            obscureText: _obscureAccount,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-              _UpperCaseFormatter(),
-            ],
-            suffixIcon: GestureDetector(
-              onTap: () => setState(() => _obscureAccount = !_obscureAccount),
-              child: Icon(
-                _obscureAccount
-                    ? Icons.visibility_off_rounded
-                    : Icons.visibility_rounded,
-                color: const Color(0xFF8FA0B0),
-                size: 20,
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Link Bank Account',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: AppColors.headingNavy,
+                letterSpacing: -0.6,
+                height: 1.1,
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _BankField(
-            label: 'Confirm Account Number',
-            hint: 'Re-enter account number',
-            controller: _confirmCtrl,
-            errorText: data.confirmAccountNumberError,
-            onChanged: (value) =>
-                cubit.updateConfirmAccountNumber(value.toUpperCase()),
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-              _UpperCaseFormatter(),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _BankField(
-            label: 'IFSC Code',
-            hint: 'HDFC0000000',
-            controller: _ifscCtrl,
-            errorText: data.ifscError,
-            onChanged: (v) => cubit.updateIfscCode(v.toUpperCase()),
-            keyboardType: TextInputType.text,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-              LengthLimitingTextInputFormatter(11),
-              _UpperCaseFormatter(),
-            ],
-          ),
-          const SizedBox(height: 20),
-          DocumentCaptureCard(
-            label: 'Bank Book Front Page',
-            captured:
-                data.bankDocumentPath != null &&
-                data.bankDocumentPath!.trim().isNotEmpty,
-            filePath: data.bankDocumentPath,
-            uploadType: data.bankDocumentType,
-            showCardGuide: true,
-            onTap: () => showBankDocumentSourceSheet(context),
-            onRemove: () => cubit.removeBankDocument(),
-          ),
-          if (data.bankDocumentError != null) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              key: _bankDocErrorKey,
-              width: double.infinity,
-              child: Text(
-                data.bankDocumentError!,
-                style: const TextStyle(fontSize: 11, color: Color(0xFFE53935)),
+            const SizedBox(height: 5),
+            Text(
+              'Securely link your account for direct payouts',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade500,
+                fontWeight: FontWeight.w400,
               ),
             ),
-          ],
-          const SizedBox(height: 32),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Column(
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.lock, color: AppColors.gold, size: 18),
-                    SizedBox(width: 10),
-                    Text(
-                      'Security Guaranteed',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.headingNavy,
-                        letterSpacing: 0.1,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Your data is encrypted and managed according to\npremium banking standards.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade500,
-                    height: 1.4,
-                  ),
-                ),
+            const SizedBox(height: 24),
+            _BankField(
+              label: 'Account Holder Name',
+              hint: 'Enter full name as per bank records',
+              controller: _nameCtrl,
+              focusNode: _nameFocus,
+              errorText: data.nameError,
+              onChanged: (value) =>
+                  cubit.updateAccountHolderName(value.toUpperCase()),
+              keyboardType: TextInputType.name,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _bankFocus.requestFocus(),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z ]')),
+                _UpperCaseFormatter(),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-        ],
+            const SizedBox(height: 20),
+            _BankField(
+              label: 'Bank Name',
+              hint: 'Enter bank name',
+              controller: _bankCtrl,
+              focusNode: _bankFocus,
+              errorText: data.bankNameError,
+              onChanged: (value) => cubit.updateBankName(value.toUpperCase()),
+              keyboardType: TextInputType.name,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _accFocus.requestFocus(),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z ]')),
+                _UpperCaseFormatter(),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _BankField(
+              label: 'Account Number',
+              hint: '•••• •••• •••• ••••',
+              controller: _accCtrl,
+              focusNode: _accFocus,
+              errorText: data.accountNumberError,
+              onChanged: (value) =>
+                  cubit.updateAccountNumber(value.toUpperCase()),
+              keyboardType: TextInputType.number,
+              obscureText: _obscureAccount,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _confirmFocus.requestFocus(),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                _UpperCaseFormatter(),
+              ],
+              suffixIcon: GestureDetector(
+                onTap: () => setState(() => _obscureAccount = !_obscureAccount),
+                child: Icon(
+                  _obscureAccount
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                  color: const Color(0xFF8FA0B0),
+                  size: 20,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _BankField(
+              label: 'Confirm Account Number',
+              hint: 'Re-enter account number',
+              controller: _confirmCtrl,
+              focusNode: _confirmFocus,
+              errorText: data.confirmAccountNumberError,
+              onChanged: (value) =>
+                  cubit.updateConfirmAccountNumber(value.toUpperCase()),
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _ifscFocus.requestFocus(),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                _UpperCaseFormatter(),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _BankField(
+              label: 'IFSC Code',
+              hint: 'HDFC0000000',
+              controller: _ifscCtrl,
+              focusNode: _ifscFocus,
+              errorText: data.ifscError,
+              onChanged: (v) {
+                final value = v.toUpperCase();
+                cubit.updateIfscCode(value);
+                if (value.trim().length == 11) {
+                  FocusScope.of(context).unfocus();
+                }
+              },
+              keyboardType: TextInputType.text,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => FocusScope.of(context).unfocus(),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                LengthLimitingTextInputFormatter(11),
+                _UpperCaseFormatter(),
+              ],
+            ),
+            const SizedBox(height: 20),
+            DocumentCaptureCard(
+              label: 'Bank Book Front Page',
+              captured:
+                  data.bankDocumentPath != null &&
+                  data.bankDocumentPath!.trim().isNotEmpty,
+              filePath: data.bankDocumentPath,
+              uploadType: data.bankDocumentType,
+              showCardGuide: true,
+              onTap: () => showBankDocumentSourceSheet(context),
+              onRemove: () => cubit.removeBankDocument(),
+            ),
+            if (data.bankDocumentError != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                key: _bankDocErrorKey,
+                width: double.infinity,
+                child: Text(
+                  data.bankDocumentError!,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFFE53935),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 32),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Column(
+                children: [
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.lock, color: AppColors.gold, size: 18),
+                      SizedBox(width: 10),
+                      Text(
+                        'Security Guaranteed',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.headingNavy,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Your data is encrypted and managed according to\npremium banking standards.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -257,11 +300,14 @@ class _BankField extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     this.errorText,
+    this.focusNode,
     this.keyboardType = TextInputType.text,
     this.obscureText = false,
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.suffixIcon,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   final String label;
@@ -269,11 +315,14 @@ class _BankField extends StatelessWidget {
   final TextEditingController controller;
   final String? errorText;
   final ValueChanged<String> onChanged;
+  final FocusNode? focusNode;
   final TextInputType keyboardType;
   final bool obscureText;
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final Widget? suffixIcon;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -295,6 +344,9 @@ class _BankField extends StatelessWidget {
         TextField(
           controller: controller,
           onChanged: onChanged,
+          focusNode: focusNode,
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
           keyboardType: keyboardType,
           obscureText: obscureText,
           textCapitalization: textCapitalization,

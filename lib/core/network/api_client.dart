@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../config/api_config.dart';
 import '../utils/env.dart';
 import 'api_endpoints.dart';
 
@@ -14,7 +15,7 @@ class ApiClient {
   ApiClient({required this.dio, this.tokenProvider, bool? enableLogging})
     : enableLogging = enableLogging ?? kDebugMode {
     dio.options = BaseOptions(
-      baseUrl: Env.baseUrl,
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 20),
       receiveTimeout: const Duration(seconds: 20),
       headers: {

@@ -8,14 +8,21 @@ import 'package:goapp/features/document_verify/presentation/model/document_model
 import 'package:goapp/features/document_verify/presentation/model/document_progress_store.dart';
 import 'package:goapp/features/documents/presentation/model/document_model.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
+import 'package:goapp/features/documents/presentation/pages/vehicle_rc_upload_screen.dart';
 
-class DocumentDetailScreen extends StatelessWidget {
+class DocumentDetailScreen extends StatefulWidget {
   final DocumentModel document;
 
   const DocumentDetailScreen({super.key, required this.document});
 
   @override
+  State<DocumentDetailScreen> createState() => _DocumentDetailScreenState();
+}
+
+class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
+  @override
   Widget build(BuildContext context) {
+    final isVehicleRc = widget.document.iconAsset == 'vehicle_rc';
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: _buildAppBar(context),
@@ -24,10 +31,12 @@ class DocumentDetailScreen extends StatelessWidget {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: _buildContent(),
+              child: _buildContent(context),
             ),
           ),
-          _EncryptionFooter(),
+          if (isVehicleRc) const _VehicleRcBottomPrompt(),
+          if (isVehicleRc) _VehicleRcEditButton(onPressed: _editVehicleRc),
+          if (!isVehicleRc) _EncryptionFooter(),
         ],
       ),
     );
@@ -38,7 +47,7 @@ class DocumentDetailScreen extends StatelessWidget {
       backgroundColor: AppColors.white,
       elevation: 0,
       centerTitle: true,
-      title: Text(document.title),
+      title: Text(widget.document.title),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(color: AppColors.strokeLight, height: 1),
@@ -46,11 +55,11 @@ class DocumentDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
     final frontImagePath = _resolvedFrontImagePath();
     final backImagePath = _resolvedBackImagePath();
     final documentNumber = _resolvedDocumentNumber();
-    switch (document.iconAsset) {
+    switch (widget.document.iconAsset) {
       case 'driving_license':
         return _DrivingLicenseDetail(
           frontImagePath: frontImagePath,
@@ -58,10 +67,38 @@ class DocumentDetailScreen extends StatelessWidget {
           licenseNumber: documentNumber,
         );
       case 'vehicle_rc':
-        return _VehicleRCDetail(
-          frontImagePath: frontImagePath,
-          backImagePath: backImagePath,
-          vehicleNumber: documentNumber,
+        final oldFront = DocumentProgressStore.previousFrontImagePath(
+          DocumentType.vehicleRC,
+        );
+        final oldBack = DocumentProgressStore.previousBackImagePath(
+          DocumentType.vehicleRC,
+        );
+        final oldNumber = DocumentProgressStore.previousDocumentNumber(
+          DocumentType.vehicleRC,
+        );
+        final hasOld =
+            (oldFront != null && oldFront.trim().isNotEmpty) ||
+            (oldBack != null && oldBack.trim().isNotEmpty) ||
+            (oldNumber != null && oldNumber.trim().isNotEmpty);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _VehicleRCDetail(
+              frontImagePath: frontImagePath,
+              backImagePath: backImagePath,
+              vehicleNumber: documentNumber,
+              headerText: 'NEW RC',
+            ),
+            if (hasOld) ...[
+              const SizedBox(height: 22),
+              _VehicleRCDetail(
+                headerText: 'OLD RC',
+                frontImagePath: oldFront,
+                backImagePath: oldBack,
+                vehicleNumber: oldNumber,
+              ),
+            ],
+          ],
         );
       case 'aadhaar_card':
         return _AadhaarCardDetail(
@@ -87,7 +124,7 @@ class DocumentDetailScreen extends StatelessWidget {
   }
 
   DocumentType? _documentTypeFromAsset() {
-    switch (document.iconAsset) {
+    switch (widget.document.iconAsset) {
       case 'driving_license':
         return DocumentType.drivingLicense;
       case 'vehicle_rc':
@@ -110,7 +147,7 @@ class DocumentDetailScreen extends StatelessWidget {
         ? null
         : DocumentProgressStore.frontImagePath(type);
     if (latest != null && latest.trim().isNotEmpty) return latest;
-    return document.frontImagePath;
+    return widget.document.frontImagePath;
   }
 
   String? _resolvedBackImagePath() {
@@ -119,7 +156,7 @@ class DocumentDetailScreen extends StatelessWidget {
         ? null
         : DocumentProgressStore.backImagePath(type);
     if (latest != null && latest.trim().isNotEmpty) return latest;
-    return document.backImagePath;
+    return widget.document.backImagePath;
   }
 
   String? _resolvedDocumentNumber() {
@@ -128,7 +165,89 @@ class DocumentDetailScreen extends StatelessWidget {
         ? null
         : DocumentProgressStore.documentNumber(type);
     if (latest != null && latest.trim().isNotEmpty) return latest;
-    return document.documentNumber;
+    return widget.document.documentNumber;
+  }
+
+  Future<void> _editVehicleRc() async {
+    final previousCompleted = DocumentProgressStore.isCompleted(
+      DocumentType.vehicleRC,
+    );
+    final previousFront = DocumentProgressStore.frontImagePath(
+      DocumentType.vehicleRC,
+    );
+    final previousBack = DocumentProgressStore.backImagePath(
+      DocumentType.vehicleRC,
+    );
+    final previousNumber = DocumentProgressStore.documentNumber(
+      DocumentType.vehicleRC,
+    );
+
+    final resolvedFront = _resolvedFrontImagePath();
+    final resolvedBack = _resolvedBackImagePath();
+    final resolvedNumber = _resolvedDocumentNumber();
+
+    DocumentProgressStore.setCompleted(DocumentType.vehicleRC, false);
+    DocumentProgressStore.setFrontImagePath(DocumentType.vehicleRC, null);
+    DocumentProgressStore.setBackImagePath(DocumentType.vehicleRC, null);
+    DocumentProgressStore.setDocumentNumber(DocumentType.vehicleRC, null);
+
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const VehicleRcUploadScreen()),
+    );
+
+    if (!mounted) return;
+
+    if (result == true) {
+      final hasOld =
+          (resolvedFront != null && resolvedFront.trim().isNotEmpty) ||
+          (resolvedBack != null && resolvedBack.trim().isNotEmpty) ||
+          (resolvedNumber != null && resolvedNumber.trim().isNotEmpty);
+      if (hasOld) {
+        DocumentProgressStore.setPreviousFrontImagePath(
+          DocumentType.vehicleRC,
+          resolvedFront,
+        );
+        DocumentProgressStore.setPreviousBackImagePath(
+          DocumentType.vehicleRC,
+          resolvedBack,
+        );
+        DocumentProgressStore.setPreviousDocumentNumber(
+          DocumentType.vehicleRC,
+          resolvedNumber,
+        );
+      } else {
+        DocumentProgressStore.setPreviousFrontImagePath(
+          DocumentType.vehicleRC,
+          null,
+        );
+        DocumentProgressStore.setPreviousBackImagePath(
+          DocumentType.vehicleRC,
+          null,
+        );
+        DocumentProgressStore.setPreviousDocumentNumber(
+          DocumentType.vehicleRC,
+          null,
+        );
+      }
+    } else {
+      DocumentProgressStore.setCompleted(
+        DocumentType.vehicleRC,
+        previousCompleted,
+      );
+      DocumentProgressStore.setFrontImagePath(
+        DocumentType.vehicleRC,
+        previousFront,
+      );
+      DocumentProgressStore.setBackImagePath(
+        DocumentType.vehicleRC,
+        previousBack,
+      );
+      DocumentProgressStore.setDocumentNumber(
+        DocumentType.vehicleRC,
+        previousNumber,
+      );
+    }
+    setState(() {});
   }
 }
 
@@ -185,11 +304,13 @@ class _DrivingLicenseDetail extends StatelessWidget {
 }
 
 class _VehicleRCDetail extends StatelessWidget {
+  final String headerText;
   final String? frontImagePath;
   final String? backImagePath;
   final String? vehicleNumber;
 
   const _VehicleRCDetail({
+    this.headerText = 'Registration Document',
     this.frontImagePath,
     this.backImagePath,
     this.vehicleNumber,
@@ -200,7 +321,7 @@ class _VehicleRCDetail extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SubHeader(text: 'Registration Document'),
+        _SubHeader(text: headerText),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -974,6 +1095,92 @@ class _EncryptionFooter extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VehicleRcBottomPrompt extends StatelessWidget {
+  const _VehicleRcBottomPrompt();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+      child: Center(
+        child: FractionallySizedBox(
+          widthFactor: 0.65,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.hexFFF0FDF4,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Riding a different vehicle?',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.emerald,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Update your current vehicle details so rider\ncan identify your vehicle easily',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textSecondary,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VehicleRcEditButton extends StatelessWidget {
+  const _VehicleRcEditButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomPadding),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.emerald,
+              foregroundColor: AppColors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: const Text(
+              'Upload New RC',
+              style: TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

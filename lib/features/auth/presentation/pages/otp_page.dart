@@ -102,7 +102,6 @@ class _OtpPageState extends SmsAutoFillState<OtpPage> {
     final hasCompletedProfile =
         (existing?.fullName.trim().isNotEmpty ?? false) &&
         (existing?.gender.trim().isNotEmpty ?? false);
-
     await RegistrationProgressStore.markOtpVerified();
     if (hasCompletedProfile) {
       await RegistrationProgressStore.setStep(RegistrationStep.home);
@@ -195,7 +194,12 @@ class _OtpPageState extends SmsAutoFillState<OtpPage> {
                 BlocListener<AuthBloc, AuthState>(
                   listener: (context, state) async {
                     if (state is AuthSuccess) {
+                      _otpCubit.handleAuthSuccess();
                       await _handleSuccess(syncSession: true, user: state.user);
+                      return;
+                    }
+                    if (state is AuthFailure) {
+                      _otpCubit.handleAuthFailure(state.message);
                     }
                   },
                 ),
@@ -221,8 +225,7 @@ class _OtpPageState extends SmsAutoFillState<OtpPage> {
                       _otpCubit.consumeActions();
                       return;
                     } catch (_) {}
-                    _otpCubit.consumeActions();
-                    await _handleSuccess(syncSession: false);
+                    _otpCubit.handleAuthFailure('Wrong OTP');
                     return;
                   }
                 },
@@ -296,6 +299,18 @@ class _OtpPageState extends SmsAutoFillState<OtpPage> {
                             ),
                           ),
                         ],
+                        if (otpState.errorMessage != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            otpState.errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.red,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 34),
                         const Text(
                           "Didn't receive the code?",
@@ -350,18 +365,6 @@ class _OtpPageState extends SmsAutoFillState<OtpPage> {
                             ],
                           ],
                         ),
-                        if (otpState.errorMessage != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            otpState.errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.red,
-                            ),
-                          ),
-                        ],
                         if (otpState.resendMessage != null) ...[
                           const SizedBox(height: 8),
                           Text(

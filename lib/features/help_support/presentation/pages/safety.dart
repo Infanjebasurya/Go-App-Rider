@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/theme/app_colors.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
@@ -7,6 +8,7 @@ import 'package:goapp/features/help_support/presentation/cubit/safety_preference
 import 'package:goapp/core/widgets/persistent_text_controller.dart';
 import 'package:goapp/core/widgets/shadow_button.dart';
 import 'package:goapp/core/di/injection.dart';
+import 'package:goapp/features/auth/domain/services/phone_number_service.dart';
 
 class SafetyPage extends StatelessWidget {
   const SafetyPage({super.key});
@@ -537,6 +539,10 @@ class _AddContactSheetState extends State<_AddContactSheet> {
   late final PersistentTextController _nameController;
   late final PersistentTextController _relationController;
   late final PersistentTextController _numberController;
+  final PhoneNumberService _phoneNumberService = PhoneNumberService();
+
+  String? _nameError;
+  String? _numberError;
 
   @override
   void initState() {
@@ -614,6 +620,13 @@ class _AddContactSheetState extends State<_AddContactSheet> {
               controller: _nameController,
               hint: 'Enter Name',
               leading: Icons.person_outline,
+              errorText: _nameError,
+              onChanged: (value) {
+                if (_nameError == null) return;
+                if (value.trim().isNotEmpty) {
+                  setState(() => _nameError = null);
+                }
+              },
             ),
             const SizedBox(height: 14),
             const Text(
@@ -642,9 +655,22 @@ class _AddContactSheetState extends State<_AddContactSheet> {
             const SizedBox(height: 8),
             _InputField(
               controller: _numberController,
-              hint: 'Enter Number',
+              hint: 'Enter mobile number',
               leading: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
+              errorText: _numberError,
+              onChanged: (value) {
+                final digits = _phoneNumberService.normalizeDigits(value);
+                final err = _phoneNumberService.validateIndiaMobile(
+                  rawInput: value.trim(),
+                  digits: digits,
+                );
+                setState(() => _numberError = err);
+              },
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
             ),
             const SizedBox(height: 16),
             Row(
@@ -667,20 +693,31 @@ class _AddContactSheetState extends State<_AddContactSheet> {
                     borderRadius: 999,
                     onPressed: () {
                       final name = _nameController.text.trim();
-                      final number = _numberController.text.trim();
-                      final isValid =
-                          EmergencyContactsCubit.isValidContactInput(
-                            name: name,
-                            number: number,
+                      final rawNumber = _numberController.text.trim();
+                      final digits = _phoneNumberService.normalizeDigits(
+                        rawNumber,
+                      );
+
+                      final nameError = name.isEmpty ? 'Enter name' : null;
+                      final numberError = _phoneNumberService
+                          .validateIndiaMobile(
+                            rawInput: rawNumber,
+                            digits: digits,
                           );
-                      if (!isValid) {
-                        Navigator.of(context).pop();
+
+                      if (nameError != null || numberError != null) {
+                        setState(() {
+                          _nameError = nameError;
+                          _numberError = numberError;
+                        });
                         return;
                       }
+
+                      final displayNumber = '+91 $digits';
                       Navigator.of(context).pop(
                         EmergencyContact(
                           name: name,
-                          number: number,
+                          number: displayNumber,
                           isPrimary: false,
                         ),
                       );
@@ -702,20 +739,29 @@ class _InputField extends StatelessWidget {
     required this.hint,
     required this.leading,
     this.keyboardType,
+    this.errorText,
+    this.onChanged,
+    this.inputFormatters,
   });
 
   final TextEditingController? controller;
   final String hint;
   final IconData leading;
   final TextInputType? keyboardType;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      onChanged: onChanged,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         hintText: hint,
+        errorText: errorText,
         filled: true,
         fillColor: AppColors.white,
         prefixIcon: Icon(leading, size: 18, color: AppColors.sectionLabel),

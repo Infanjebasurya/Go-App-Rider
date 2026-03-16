@@ -144,6 +144,10 @@ class DocumentStepContent extends StatelessWidget {
             uploadType: stepData.frontType,
             showCardGuide: isCardCaptureStep,
           ),
+          if (stepData.imageError != null && !stepData.frontCaptured) ...[
+            const SizedBox(height: 10),
+            _ImageErrorText(stepData.imageError!),
+          ],
           if (requiresBackSide) ...[
             const SizedBox(height: 14),
             DocumentCaptureCard(
@@ -164,13 +168,10 @@ class DocumentStepContent extends StatelessWidget {
               uploadType: stepData.backType,
               showCardGuide: isCardCaptureStep,
             ),
-          ],
-          if (stepData.imageError != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              stepData.imageError!,
-              style: const TextStyle(fontSize: 11, color: Color(0xFFE53935)),
-            ),
+            if (stepData.imageError != null && !stepData.backCaptured) ...[
+              const SizedBox(height: 10),
+              _ImageErrorText(stepData.imageError!),
+            ],
           ],
           const SizedBox(height: 28),
           DocNumberField(
@@ -213,6 +214,20 @@ class DocumentStepContent extends StatelessWidget {
   }
 }
 
+class _ImageErrorText extends StatelessWidget {
+  const _ImageErrorText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(fontSize: 11, color: Color(0xFFE53935)),
+    );
+  }
+}
+
 class DocumentActionButton extends StatelessWidget {
   const DocumentActionButton({
     super.key,
@@ -235,12 +250,16 @@ class DocumentActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = mediaQuery.viewInsets.bottom;
+    final bottomSafePadding = mediaQuery.padding.bottom;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
         22,
         12,
         22,
-        MediaQuery.of(context).padding.bottom + 20,
+        bottomInset + bottomSafePadding + 20,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,

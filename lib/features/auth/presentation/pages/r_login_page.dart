@@ -69,9 +69,14 @@ class _RLoginPageState extends State<RLoginPage> {
                     ),
                   ),
                 );
-                SnackBarUtils.show(context, 'OTP sent');
+                SnackBarUtils.show(
+                  context,
+                  'Received OTP Successful !! OTP is 5656',
+                );
               }
               if (state is AuthFailure) {
+                final route = ModalRoute.of(context);
+                if (route?.isCurrent != true) return;
                 SnackBarUtils.show(context, state.message);
               }
             },

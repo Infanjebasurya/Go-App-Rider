@@ -6,11 +6,6 @@ class Env {
     defaultValue: 'dev',
   );
 
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://api.dev.goapp.com',
-  );
-
   static const bool mockApi = bool.fromEnvironment(
     'MOCK_API',
     defaultValue: true,
