@@ -292,17 +292,6 @@ Future<void> _captureFrontDocument(DocumentUploadCubit cubit) async {
 
   cubit._isPicking = true;
   try {
-    if (_requiresCr80CardAspect(cubit.state.currentDocStep.step)) {
-      cubit._emitState(
-        cubit.state.copyWithDocStep(
-          cubit.state.currentDocStep.copyWith(
-            imageError:
-                'Please upload a card photo (image only) for this document.',
-          ),
-        ),
-      );
-      return;
-    }
     final file = await cubit._filePickerService.pickCustom(
       allowedExtensions: const ['pdf', 'doc', 'docx'],
     );
@@ -435,17 +424,6 @@ Future<void> _captureBackDocument(DocumentUploadCubit cubit) async {
 
   cubit._isPicking = true;
   try {
-    if (_requiresCr80CardAspect(cubit.state.currentDocStep.step)) {
-      cubit._emitState(
-        cubit.state.copyWithDocStep(
-          cubit.state.currentDocStep.copyWith(
-            imageError:
-                'Please upload a card photo (image only) for this document.',
-          ),
-        ),
-      );
-      return;
-    }
     final file = await cubit._filePickerService.pickCustom(
       allowedExtensions: const ['pdf', 'doc', 'docx'],
     );

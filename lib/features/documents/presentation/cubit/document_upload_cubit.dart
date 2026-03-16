@@ -255,6 +255,10 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     return _saveAndNext(this);
   }
 
+  bool validateCurrentDocumentStep() {
+    return _validateDocStep(this);
+  }
+
   void _emitState(DocumentUploadState nextState) {
     if (isClosed) return;
     emit(nextState);

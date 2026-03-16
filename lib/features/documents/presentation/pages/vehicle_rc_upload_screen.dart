@@ -1,0 +1,133 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:goapp/core/di/injection.dart';
+import 'package:goapp/core/theme/app_colors.dart';
+import 'package:goapp/core/widgets/app_app_bar.dart';
+import 'package:goapp/features/documents/presentation/cubit/document_upload_cubit.dart';
+import 'package:goapp/features/documents/presentation/model/document_upload_model.dart';
+import 'package:goapp/features/documents/presentation/pages/document_upload_sections.dart';
+
+class VehicleRcUploadScreen extends StatelessWidget {
+  const VehicleRcUploadScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<DocumentUploadCubit>(param1: 2),
+      child: const _VehicleRcUploadView(),
+    );
+  }
+}
+
+class _VehicleRcUploadView extends StatefulWidget {
+  const _VehicleRcUploadView();
+
+  @override
+  State<_VehicleRcUploadView> createState() => _VehicleRcUploadViewState();
+}
+
+class _VehicleRcUploadViewState extends State<_VehicleRcUploadView> {
+  late final TextEditingController _numberController;
+
+  @override
+  void initState() {
+    super.initState();
+    _numberController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _numberController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<DocumentUploadCubit, DocumentUploadState>(
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: AppColors.white,
+          appBar: AppAppBar(
+            title: 'Vehicle RC',
+            onBack: () => Navigator.of(context).pop(),
+          ),
+          body: Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    DocumentStepContent(
+                      key: const ValueKey('vehicle_rc_step'),
+                      config: state.currentConfig,
+                      stepData: state.currentDocStep,
+                      numberController: _numberController,
+                    ),
+                  ],
+                ),
+              ),
+              _BottomCta(label: 'Save', onTap: () => _submit(context)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _submit(BuildContext context) {
+    FocusScope.of(context).unfocus();
+    final cubit = context.read<DocumentUploadCubit>();
+    final ok = cubit.validateCurrentDocumentStep();
+    if (!ok) return;
+    Navigator.of(context).pop(true);
+  }
+}
+
+class _BottomCta extends StatelessWidget {
+  const _BottomCta({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = mediaQuery.viewInsets.bottom;
+    final bottomSafePadding = mediaQuery.padding.bottom;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        bottomInset + bottomSafePadding + 20,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        border: Border(top: BorderSide(color: AppColors.coolwhite)),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: onTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.emerald,
+            foregroundColor: AppColors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 15.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
