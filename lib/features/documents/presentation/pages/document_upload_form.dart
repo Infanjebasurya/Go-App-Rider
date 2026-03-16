@@ -23,6 +23,11 @@ class _BankAccountFormState extends State<BankAccountForm> {
   late final TextEditingController _accCtrl;
   late final TextEditingController _confirmCtrl;
   late final TextEditingController _ifscCtrl;
+  late final FocusNode _nameFocus;
+  late final FocusNode _bankFocus;
+  late final FocusNode _accFocus;
+  late final FocusNode _confirmFocus;
+  late final FocusNode _ifscFocus;
   bool _obscureAccount = true;
   final GlobalKey _bankDocErrorKey = GlobalKey();
 
@@ -36,6 +41,11 @@ class _BankAccountFormState extends State<BankAccountForm> {
       text: widget.bankData.confirmAccountNumber,
     );
     _ifscCtrl = TextEditingController(text: widget.bankData.ifscCode);
+    _nameFocus = FocusNode();
+    _bankFocus = FocusNode();
+    _accFocus = FocusNode();
+    _confirmFocus = FocusNode();
+    _ifscFocus = FocusNode();
   }
 
   @override
@@ -45,6 +55,11 @@ class _BankAccountFormState extends State<BankAccountForm> {
     _accCtrl.dispose();
     _confirmCtrl.dispose();
     _ifscCtrl.dispose();
+    _nameFocus.dispose();
+    _bankFocus.dispose();
+    _accFocus.dispose();
+    _confirmFocus.dispose();
+    _ifscFocus.dispose();
     super.dispose();
   }
 
@@ -77,12 +92,15 @@ class _BankAccountFormState extends State<BankAccountForm> {
     final data = widget.bankData;
     final cubit = context.read<DocumentUploadCubit>();
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           const Text(
             'Link Bank Account',
             style: TextStyle(
@@ -107,11 +125,14 @@ class _BankAccountFormState extends State<BankAccountForm> {
             label: 'Account Holder Name',
             hint: 'Enter full name as per bank records',
             controller: _nameCtrl,
+            focusNode: _nameFocus,
             errorText: data.nameError,
             onChanged: (value) =>
                 cubit.updateAccountHolderName(value.toUpperCase()),
             keyboardType: TextInputType.name,
             textCapitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _bankFocus.requestFocus(),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z ]')),
               _UpperCaseFormatter(),
@@ -122,10 +143,13 @@ class _BankAccountFormState extends State<BankAccountForm> {
             label: 'Bank Name',
             hint: 'Enter bank name',
             controller: _bankCtrl,
+            focusNode: _bankFocus,
             errorText: data.bankNameError,
             onChanged: (value) => cubit.updateBankName(value.toUpperCase()),
             keyboardType: TextInputType.name,
             textCapitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _accFocus.requestFocus(),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z ]')),
               _UpperCaseFormatter(),
@@ -136,11 +160,14 @@ class _BankAccountFormState extends State<BankAccountForm> {
             label: 'Account Number',
             hint: '•••• •••• •••• ••••',
             controller: _accCtrl,
+            focusNode: _accFocus,
             errorText: data.accountNumberError,
             onChanged: (value) =>
                 cubit.updateAccountNumber(value.toUpperCase()),
             keyboardType: TextInputType.number,
             obscureText: _obscureAccount,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _confirmFocus.requestFocus(),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
               _UpperCaseFormatter(),
@@ -161,10 +188,13 @@ class _BankAccountFormState extends State<BankAccountForm> {
             label: 'Confirm Account Number',
             hint: 'Re-enter account number',
             controller: _confirmCtrl,
+            focusNode: _confirmFocus,
             errorText: data.confirmAccountNumberError,
             onChanged: (value) =>
                 cubit.updateConfirmAccountNumber(value.toUpperCase()),
             keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _ifscFocus.requestFocus(),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
               _UpperCaseFormatter(),
@@ -175,10 +205,19 @@ class _BankAccountFormState extends State<BankAccountForm> {
             label: 'IFSC Code',
             hint: 'HDFC0000000',
             controller: _ifscCtrl,
+            focusNode: _ifscFocus,
             errorText: data.ifscError,
-            onChanged: (v) => cubit.updateIfscCode(v.toUpperCase()),
+            onChanged: (v) {
+              final value = v.toUpperCase();
+              cubit.updateIfscCode(value);
+              if (value.trim().length == 11) {
+                FocusScope.of(context).unfocus();
+              }
+            },
             keyboardType: TextInputType.text,
             textCapitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => FocusScope.of(context).unfocus(),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
               LengthLimitingTextInputFormatter(11),
@@ -244,7 +283,8 @@ class _BankAccountFormState extends State<BankAccountForm> {
             ),
           ),
           const SizedBox(height: 24),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -257,11 +297,14 @@ class _BankField extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     this.errorText,
+    this.focusNode,
     this.keyboardType = TextInputType.text,
     this.obscureText = false,
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.suffixIcon,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   final String label;
@@ -269,11 +312,14 @@ class _BankField extends StatelessWidget {
   final TextEditingController controller;
   final String? errorText;
   final ValueChanged<String> onChanged;
+  final FocusNode? focusNode;
   final TextInputType keyboardType;
   final bool obscureText;
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final Widget? suffixIcon;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -295,6 +341,9 @@ class _BankField extends StatelessWidget {
         TextField(
           controller: controller,
           onChanged: onChanged,
+          focusNode: focusNode,
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
           keyboardType: keyboardType,
           obscureText: obscureText,
           textCapitalization: textCapitalization,

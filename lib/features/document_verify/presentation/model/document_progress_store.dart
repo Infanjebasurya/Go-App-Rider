@@ -33,7 +33,31 @@ class DocumentProgressStore {
     DocumentType.bankDetails: null,
   };
 
+  static final Map<DocumentType, String?> _previousFrontImagePath = {
+    DocumentType.drivingLicense: null,
+    DocumentType.vehicleRC: null,
+    DocumentType.aadhaarCard: null,
+    DocumentType.panCard: null,
+    DocumentType.bankDetails: null,
+  };
+
+  static final Map<DocumentType, String?> _previousBackImagePath = {
+    DocumentType.drivingLicense: null,
+    DocumentType.vehicleRC: null,
+    DocumentType.aadhaarCard: null,
+    DocumentType.panCard: null,
+    DocumentType.bankDetails: null,
+  };
+
   static final Map<DocumentType, String?> _documentNumber = {
+    DocumentType.drivingLicense: null,
+    DocumentType.vehicleRC: null,
+    DocumentType.aadhaarCard: null,
+    DocumentType.panCard: null,
+    DocumentType.bankDetails: null,
+  };
+
+  static final Map<DocumentType, String?> _previousDocumentNumber = {
     DocumentType.drivingLicense: null,
     DocumentType.vehicleRC: null,
     DocumentType.aadhaarCard: null,
@@ -95,11 +119,41 @@ class DocumentProgressStore {
       }
     }
 
+    final previousFrontRaw = json['previousFrontImagePath'];
+    if (previousFrontRaw is Map<String, dynamic>) {
+      for (final type in DocumentType.values) {
+        final value = previousFrontRaw[type.name];
+        _previousFrontImagePath[type] = value is String && value.isNotEmpty
+            ? value
+            : null;
+      }
+    }
+
+    final previousBackRaw = json['previousBackImagePath'];
+    if (previousBackRaw is Map<String, dynamic>) {
+      for (final type in DocumentType.values) {
+        final value = previousBackRaw[type.name];
+        _previousBackImagePath[type] = value is String && value.isNotEmpty
+            ? value
+            : null;
+      }
+    }
+
     final numberRaw = json['documentNumber'];
     if (numberRaw is Map<String, dynamic>) {
       for (final type in DocumentType.values) {
         final value = numberRaw[type.name];
         _documentNumber[type] = value is String && value.isNotEmpty
+            ? value
+            : null;
+      }
+    }
+
+    final previousNumberRaw = json['previousDocumentNumber'];
+    if (previousNumberRaw is Map<String, dynamic>) {
+      for (final type in DocumentType.values) {
+        final value = previousNumberRaw[type.name];
+        _previousDocumentNumber[type] = value is String && value.isNotEmpty
             ? value
             : null;
       }
@@ -128,7 +182,10 @@ class DocumentProgressStore {
       'completed': mapByType(_completed),
       'frontImagePath': mapByType(_frontImagePath),
       'backImagePath': mapByType(_backImagePath),
+      'previousFrontImagePath': mapByType(_previousFrontImagePath),
+      'previousBackImagePath': mapByType(_previousBackImagePath),
       'documentNumber': mapByType(_documentNumber),
+      'previousDocumentNumber': mapByType(_previousDocumentNumber),
       'bankDraft': Map<String, String>.from(_bankDraft),
       'profileImagePath': _profileImagePath,
     };
@@ -155,6 +212,14 @@ class DocumentProgressStore {
     return _backImagePath[type];
   }
 
+  static String? previousFrontImagePath(DocumentType type) {
+    return _previousFrontImagePath[type];
+  }
+
+  static String? previousBackImagePath(DocumentType type) {
+    return _previousBackImagePath[type];
+  }
+
   static void setFrontImagePath(DocumentType type, String? path) {
     _frontImagePath[type] = path;
     _persist();
@@ -165,12 +230,31 @@ class DocumentProgressStore {
     _persist();
   }
 
+  static void setPreviousFrontImagePath(DocumentType type, String? path) {
+    _previousFrontImagePath[type] = path;
+    _persist();
+  }
+
+  static void setPreviousBackImagePath(DocumentType type, String? path) {
+    _previousBackImagePath[type] = path;
+    _persist();
+  }
+
   static String? documentNumber(DocumentType type) {
     return _documentNumber[type];
   }
 
+  static String? previousDocumentNumber(DocumentType type) {
+    return _previousDocumentNumber[type];
+  }
+
   static void setDocumentNumber(DocumentType type, String? number) {
     _documentNumber[type] = number;
+    _persist();
+  }
+
+  static void setPreviousDocumentNumber(DocumentType type, String? number) {
+    _previousDocumentNumber[type] = number;
     _persist();
   }
 
@@ -206,6 +290,9 @@ class DocumentProgressStore {
     _frontImagePath.updateAll((_, _) => null);
     _backImagePath.updateAll((_, _) => null);
     _documentNumber.updateAll((_, _) => null);
+    _previousFrontImagePath.updateAll((_, _) => null);
+    _previousBackImagePath.updateAll((_, _) => null);
+    _previousDocumentNumber.updateAll((_, _) => null);
     clearBankDraft();
     _profileImagePath = null;
     _persist();

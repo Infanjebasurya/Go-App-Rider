@@ -74,7 +74,10 @@ class _TicketTrackingScreenState extends State<TicketTrackingScreen>
               TabBar(
                 controller: _tabController,
                 onTap: (_) => setState(() {}),
-                indicatorColor: AppColors.emerald,
+                indicator: const UnderlineTabIndicator(
+                  borderSide: BorderSide(color: AppColors.emerald, width: 2.5),
+                  insets: EdgeInsets.symmetric(horizontal: 28),
+                ),
                 dividerColor: Colors.transparent,
                 dividerHeight: 0,
                 labelColor: AppColors.textBody,
@@ -227,10 +230,10 @@ class _TicketCard extends StatelessWidget {
                             label: isOpen ? 'OPEN' : 'RESOLVED',
                             background: isOpen
                                 ? AppColors.hex3325C59A
-                                : AppColors.hex1A00A86B,
+                                : const Color(0xFFFFEDED),
                             text: isOpen
                                 ? AppColors.hexFF0EA271
-                                : AppColors.hexFF00A86B,
+                                : AppColors.red,
                           ),
                         ],
                       ),
