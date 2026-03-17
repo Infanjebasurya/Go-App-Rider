@@ -23,15 +23,26 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
   final Duration _actionDelay;
 
   Future<void> loadProfile() async {
-    emit(state.copyWith(status: ProfileEditStatus.loading));
+    emit(state.copyWith(status: ProfileEditStatus.loading, errorMessage: null));
     final result = await _getCachedProfileUseCase.call();
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProfileEditStatus.error,
-          errorMessage: failure.message,
-        ),
-      ),
+      (failure) {
+        if (state.data != null) {
+          emit(
+            state.copyWith(
+              status: ProfileEditStatus.loaded,
+              errorMessage: failure.message,
+            ),
+          );
+          return;
+        }
+        emit(
+          state.copyWith(
+            status: ProfileEditStatus.error,
+            errorMessage: failure.message,
+          ),
+        );
+      },
       (profile) {
         if (profile == null) {
           emit(
@@ -45,6 +56,7 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
         emit(
           state.copyWith(
             status: ProfileEditStatus.loaded,
+            errorMessage: null,
             data: ProfileEditData(
               fullName: profile.name,
               email: profile.email ?? '',

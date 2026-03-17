@@ -13,8 +13,10 @@ class ApiConfig {
     defaultValue: '',
   );
 
+  static const String manualBaseUrl =
+      'https://nia-unterrestrial-remy.ngrok-free.dev';
   static const String developmentBaseUrl = 'https://api.dev.goappdriver.com';
-  static const String uatBaseUrl = 'https://api.uat.goappdriver.com';
+  //static const String uatBaseUrl = 'https://api.uat.goappdriver.com';
   static const String productionBaseUrl = 'https://api.goappdriver.com';
 
   static AppEnvironment get environment {
@@ -36,12 +38,15 @@ class ApiConfig {
     if (_baseUrlOverride.isNotEmpty) {
       return _baseUrlOverride;
     }
+    if (manualBaseUrl.trim().isNotEmpty) {
+      return manualBaseUrl.trim();
+    }
 
     switch (environment) {
       case AppEnvironment.production:
         return productionBaseUrl;
       case AppEnvironment.uat:
-        return uatBaseUrl;
+      //  return uatBaseUrl;
       case AppEnvironment.development:
         return developmentBaseUrl;
     }
