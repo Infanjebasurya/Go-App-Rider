@@ -1,36 +1,42 @@
 class VehicleTypeItemModel {
   const VehicleTypeItemModel({
-    required this.code,
-    required this.label,
-    this.tier,
-    this.seatsDescription,
-    this.iconKey,
+    required this.id,
+    required this.name,
+    required this.city,
+    required this.isActive,
   });
 
-  final String code;
-  final String label;
-  final String? tier;
-  final String? seatsDescription;
-  final String? iconKey;
+  final String id;
+  final String name;
+  final String city;
+  final bool isActive;
 
   factory VehicleTypeItemModel.fromJson(Map<String, dynamic> json) {
+    final dynamic activeRaw =
+        json['is_active'] ?? json['isActive'] ?? json['active'];
     return VehicleTypeItemModel(
-      code: (json['code'] ?? json['type'] ?? json['id'] ?? '').toString(),
-      label: (json['label'] ?? json['name'] ?? '').toString(),
-      tier: (json['tier'] ?? json['category'])?.toString(),
-      seatsDescription: (json['seats_description'] ?? json['seatsDescription'])
-          ?.toString(),
-      iconKey: (json['icon_key'] ?? json['iconKey'])?.toString(),
+      id:
+          (json['vehicle_type_id'] ??
+                  json['vehicleTypeId'] ??
+                  json['id'] ??
+                  json['code'] ??
+                  json['type'] ??
+                  '')
+              .toString(),
+      name: (json['name'] ?? json['label'] ?? '').toString(),
+      city: (json['city'] ?? '').toString(),
+      isActive: activeRaw == true ||
+          (activeRaw is String && activeRaw.toLowerCase() == 'true') ||
+          (activeRaw is num && activeRaw != 0),
     );
   }
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'code': code,
-      'label': label,
-      if (tier != null) 'tier': tier,
-      if (seatsDescription != null) 'seats_description': seatsDescription,
-      if (iconKey != null) 'icon_key': iconKey,
+      'vehicle_type_id': id,
+      'name': name,
+      'city': city,
+      'is_active': isActive,
     };
   }
 }

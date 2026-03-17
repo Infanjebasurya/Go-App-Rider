@@ -49,6 +49,11 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
         clearDocumentStep: true,
       ),
     );
+    unawaited(
+      context.read<VehicleSelectionCubit>().loadVehicleTypes(
+        city: widget.selectedCity.id,
+      ),
+    );
   }
 
   @override
@@ -99,21 +104,43 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Expanded(
-                  child: ListView(
-                    physics: const BouncingScrollPhysics(),
-                    children: kVehicles.map((vehicle) {
-                      return VehicleCard(
-                        key: ValueKey(vehicle.type),
-                        vehicle: vehicle,
-                        isSelected: state.isSelected(vehicle),
-                        onTap: () => context
-                            .read<VehicleSelectionCubit>()
-                            .selectVehicle(vehicle),
-                      );
-                    }).toList(),
+                if (state.isLoading && state.vehicles.isEmpty)
+                  const Expanded(
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (state.errorMessage != null && state.vehicles.isEmpty)
+                  Expanded(
+                    child: _VehicleTypesError(
+                      message: state.errorMessage!,
+                      onRetry: () => context
+                          .read<VehicleSelectionCubit>()
+                          .loadVehicleTypes(city: widget.selectedCity.id),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: Column(
+                      children: [
+                        if (state.isLoading)
+                          const LinearProgressIndicator(minHeight: 2),
+                        Expanded(
+                          child: ListView(
+                            physics: const BouncingScrollPhysics(),
+                            children: state.vehicles.map((vehicle) {
+                              return VehicleCard(
+                                key: ValueKey(vehicle.vehicleTypeId),
+                                vehicle: vehicle,
+                                isSelected: state.isSelected(vehicle),
+                                onTap: () => context
+                                    .read<VehicleSelectionCubit>()
+                                    .selectVehicle(vehicle),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
                 _ConfirmButton(
                   enabled: state.hasSelection,
                   vehicleLabel: state.selectedVehicle?.label,
@@ -124,6 +151,7 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
                           RegistrationStep.vehicleDetails,
                           cityId: widget.selectedCity.id,
                           vehicleType: state.selectedVehicle!.type.name,
+                          vehicleTypeId: state.selectedVehicle!.vehicleTypeId,
                           clearDocumentStep: true,
                         ),
                       );
@@ -140,6 +168,54 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _VehicleTypesError extends StatelessWidget {
+  const _VehicleTypesError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.gray.shade600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 44,
+              child: ShadowButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald,
+                  foregroundColor: AppColors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                onPressed: onRetry,
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

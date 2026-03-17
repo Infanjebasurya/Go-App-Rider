@@ -122,6 +122,22 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     return '${date.day} ${_months[date.month - 1]} ${date.year}';
   }
 
+  String _normalizeDobForUi(String value) {
+    final raw = value.trim();
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(raw);
+    if (match == null) return raw;
+    final year = int.tryParse(match.group(1)!);
+    final month = int.tryParse(match.group(2)!);
+    final day = int.tryParse(match.group(3)!);
+    if (year == null || month == null || day == null) return raw;
+    if (month < 1 || month > 12) return raw;
+    final parsed = DateTime(year, month, day);
+    if (parsed.year != year || parsed.month != month || parsed.day != day) {
+      return raw;
+    }
+    return '${parsed.day} ${_months[parsed.month - 1]} ${parsed.year}';
+  }
+
   void _prefillFromProfile(Profile profile) {
     if (_prefilled) return;
     _prefilled = true;
@@ -145,7 +161,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       name: name,
       email: email,
       gender: profile.gender,
-      dob: profile.dob ?? '',
+      dob: _normalizeDobForUi(profile.dob ?? ''),
       refer: refer,
       emergencyContact: emergency,
     );
@@ -220,6 +236,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       ),
                     );
                     if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Profile saved successfully'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                     _didNavigate = true;
                     _clearForm();
                     Navigator.of(context)
@@ -315,8 +337,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         .isFormValid;
                     return BlocBuilder<ProfileBloc, ProfileState>(
                       builder: (context, profileState) {
+                        final effectiveProfileState =
+                            profileState is ProfileFailure &&
+                                    formState.submission == null
+                                ? const ProfileInitial()
+                                : profileState;
                         return ProfileSetupSubmitButton(
-                          profileState: profileState,
+                          profileState: effectiveProfileState,
                           isFormValid: isFormValid,
                           onSubmit: () =>
                               context.read<ProfileSetupCubit>().submit(),

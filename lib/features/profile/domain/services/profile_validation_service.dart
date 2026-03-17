@@ -100,7 +100,7 @@ class ProfileValidationService {
 
   String? validateEmail(String email) {
     final value = email.trim();
-    if (value.isEmpty) return null;
+    if (value.isEmpty) return 'Please enter your email address';
     if (!_emailPattern.hasMatch(value)) {
       return 'Please enter a valid email address';
     }

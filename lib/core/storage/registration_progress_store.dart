@@ -20,6 +20,7 @@ class RegistrationProgress {
   final RegistrationStep step;
   final String? cityId;
   final String? vehicleType;
+  final String? vehicleTypeId;
   final int? documentStepIndex;
 
   const RegistrationProgress({
@@ -28,6 +29,7 @@ class RegistrationProgress {
     required this.step,
     this.cityId,
     this.vehicleType,
+    this.vehicleTypeId,
     this.documentStepIndex,
   });
 
@@ -45,6 +47,7 @@ class RegistrationProgress {
     RegistrationStep? step,
     String? cityId,
     String? vehicleType,
+    String? vehicleTypeId,
     int? documentStepIndex,
     bool clearCity = false,
     bool clearVehicle = false,
@@ -56,6 +59,9 @@ class RegistrationProgress {
       step: step ?? this.step,
       cityId: clearCity ? null : (cityId ?? this.cityId),
       vehicleType: clearVehicle ? null : (vehicleType ?? this.vehicleType),
+      vehicleTypeId: clearVehicle
+          ? null
+          : (vehicleTypeId ?? this.vehicleTypeId),
       documentStepIndex: clearDocumentStep
           ? null
           : (documentStepIndex ?? this.documentStepIndex),
@@ -69,6 +75,7 @@ class RegistrationProgress {
       'step': step.name,
       'cityId': cityId,
       'vehicleType': vehicleType,
+      'vehicleTypeId': vehicleTypeId,
       'documentStepIndex': documentStepIndex,
     };
   }
@@ -86,6 +93,8 @@ class RegistrationProgress {
       step: step,
       cityId: json['cityId'] as String?,
       vehicleType: json['vehicleType'] as String?,
+      vehicleTypeId: (json['vehicleTypeId'] ?? json['vehicle_type_id'])
+          ?.toString(),
       documentStepIndex: docIndex is int ? docIndex : null,
     );
   }
@@ -131,6 +140,7 @@ class RegistrationProgressStore {
     RegistrationStep step, {
     String? cityId,
     String? vehicleType,
+    String? vehicleTypeId,
     int? documentStepIndex,
     bool clearCity = false,
     bool clearVehicle = false,
@@ -142,6 +152,7 @@ class RegistrationProgressStore {
         step: step,
         cityId: cityId,
         vehicleType: vehicleType,
+        vehicleTypeId: vehicleTypeId,
         documentStepIndex: documentStepIndex,
         clearCity: clearCity,
         clearVehicle: clearVehicle,
