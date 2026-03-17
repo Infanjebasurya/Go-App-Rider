@@ -236,6 +236,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       ),
                     );
                     if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Profile saved successfully'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                     _didNavigate = true;
                     _clearForm();
                     Navigator.of(context)
@@ -331,8 +337,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         .isFormValid;
                     return BlocBuilder<ProfileBloc, ProfileState>(
                       builder: (context, profileState) {
+                        final effectiveProfileState =
+                            profileState is ProfileFailure &&
+                                    formState.submission == null
+                                ? const ProfileInitial()
+                                : profileState;
                         return ProfileSetupSubmitButton(
-                          profileState: profileState,
+                          profileState: effectiveProfileState,
                           isFormValid: isFormValid,
                           onSubmit: () =>
                               context.read<ProfileSetupCubit>().submit(),

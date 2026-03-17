@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:goapp/core/config/api_config.dart';
 import 'package:goapp/core/network/api_endpoints.dart';
 import 'package:goapp/core/storage/auth_token_store.dart';
+import 'package:goapp/core/utils/env.dart';
 import 'package:goapp/features/auth/data/models/user_model.dart';
 import 'package:goapp/features/auth/data/models/verify_otp_response_model.dart';
 
@@ -30,20 +31,26 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           dio ??
           Dio(
             BaseOptions(
-              baseUrl: ApiConfig.uatBaseUrl,
+              baseUrl: ApiConfig.baseUrl,
               connectTimeout: const Duration(seconds: 20),
               receiveTimeout: const Duration(seconds: 20),
               headers: const <String, String>{
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
               },
             ),
           );
 
-  static const String _staticPhoneNumber = '9876543210';
   static const String _staticOtpType = 'login';
-  static const String _staticOtpCode = '5656';
 
   final Dio _dio;
+
+  void _refreshBaseUrl() {
+    final String latestBaseUrl = ApiConfig.baseUrl;
+    if (_dio.options.baseUrl != latestBaseUrl) {
+      _dio.options.baseUrl = latestBaseUrl;
+    }
+  }
 
   @override
   Future<AuthResponse> login({
@@ -51,60 +58,103 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String otp,
     required String otpId,
   }) async {
-    if (otp.trim() != _staticOtpCode) {
-      debugPrint(
-        'Verify OTP blocked -> entered OTP does not match static OTP $_staticOtpCode',
-      );
-      throw Exception('Wrong OTP');
-    }
+    _refreshBaseUrl();
 
+    // Temporary/mock flow (enabled by default via Env.mockApi=true).
+    // Allows UI to proceed even if the backend OTP verification contract differs.
+    if (Env.mockApi) {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      if (otp.trim() != '5656') {
+        throw Exception('Invalid OTP');
+      }
+      await AuthTokenStore.save(
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+        tokenType: 'Bearer',
+      );
+      return AuthResponse(
+        user: UserModel(id: 'captain-001', phone: phone.trim()),
+      );
+    }
+    // Backend contract (as provided):
+    // POST /api/v1/auth/otp/verify
+    // { phoneNumber, otpCode, otpType }
     final Map<String, dynamic> body = <String, dynamic>{
-      'phoneNumber': _staticPhoneNumber,
-      'otpCode': _staticOtpCode,
+      'phoneNumber': phone.trim(),
+      'otpCode': otp.trim(),
       'otpType': _staticOtpType,
     };
 
+    final List<String> endpoints = <String>[
+      ApiEndpoints.authVerifyOtp,
+      ApiEndpoints.authLogin, // legacy fallback
+    ];
+
     debugPrint(
-      'Verify OTP request -> POST ${_dio.options.baseUrl}${ApiEndpoints.authVerifyOtp}',
+      'Verify OTP request -> POST ${_dio.options.baseUrl}${endpoints.first}',
     );
     debugPrint('Verify OTP request body -> $body');
 
     try {
-      final Response<dynamic> response = await _dio.post(
-        ApiEndpoints.authVerifyOtp,
-        data: body,
-      );
+      Response<dynamic> response;
+      String usedEndpoint = endpoints.first;
+
+      try {
+        response = await _dio.post(usedEndpoint, data: body);
+      } on DioException catch (error) {
+        if (error.response?.statusCode == 404 && endpoints.length > 1) {
+          usedEndpoint = endpoints[1];
+          debugPrint(
+            'Verify OTP endpoint not found (404). Retrying legacy endpoint -> '
+            '$usedEndpoint',
+          );
+          response = await _dio.post(usedEndpoint, data: body);
+        } else {
+          rethrow;
+        }
+      }
 
       debugPrint(
-        'Verify OTP response <- [${response.statusCode}] ${response.data}',
+        'Verify OTP response <- [$usedEndpoint] [${response.statusCode}] ${response.data}',
       );
 
       if (response.data is! Map<String, dynamic>) {
         throw Exception('Invalid verify OTP response.');
       }
 
+      final Map<String, dynamic> json =
+          response.data as Map<String, dynamic>;
+
+      // Primary parsing via existing model (supports access_token/token).
       final VerifyOtpResponseModel parsed = VerifyOtpResponseModel.fromJson(
-        response.data as Map<String, dynamic>,
+        json,
       );
 
-      if (!_isVerifyOtpSuccessful(response, parsed)) {
-        throw Exception(_extractErrorMessage(response.data));
-      }
+      // Backend contract (as provided) returns `sessionToken`, not `accessToken`.
+      final String? sessionToken = json['sessionToken']?.toString();
+      final String? refreshToken = json['refreshToken']?.toString();
 
-      final String? accessToken = parsed.accessToken;
-      if (accessToken == null || accessToken.isEmpty) {
+      final String accessToken =
+          (parsed.accessToken?.isNotEmpty ?? false)
+              ? parsed.accessToken!
+              : (sessionToken ?? '');
+
+      if (accessToken.isEmpty) {
         throw Exception('Authentication token not found.');
       }
 
       await AuthTokenStore.save(
         accessToken: accessToken,
-        refreshToken: parsed.refreshToken,
-        tokenType: parsed.tokenType,
+        refreshToken: (parsed.refreshToken?.isNotEmpty ?? false)
+            ? parsed.refreshToken
+            : refreshToken,
+        tokenType: (parsed.tokenType?.isNotEmpty ?? false)
+            ? parsed.tokenType
+            : 'Bearer',
       );
 
-      final UserModel user =
-          parsed.user ??
-          const UserModel(id: 'captain-001', phone: _staticPhoneNumber);
+      final UserModel user = parsed.user ?? _extractUserFromVerifyJson(json) ??
+          UserModel(id: 'captain-001', phone: phone.trim());
 
       return AuthResponse(user: user);
     } on DioException catch (error) {
@@ -114,17 +164,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       debugPrint(
         'Verify OTP dio details <- type=${error.type}, message=${error.message}, error=${error.error}',
       );
-      if (_shouldUseStaticFallback(error)) {
-        debugPrint('Verify OTP fallback -> using static success response');
-        await AuthTokenStore.save(
-          accessToken: 'static-access-token',
-          refreshToken: 'static-refresh-token',
-          tokenType: 'Bearer',
-        );
-        return const AuthResponse(
-          user: UserModel(id: 'captain-001', phone: _staticPhoneNumber),
-        );
-      }
       throw Exception(_mapVerifyOtpError(error));
     } catch (error) {
       debugPrint('Verify OTP unexpected error <- $error');
@@ -134,27 +173,84 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<String> requestOtp({required String phone}) async {
+    _refreshBaseUrl();
+
+    // Temporary/mock flow (enabled by default via Env.mockApi=true).
+    // Returns a stable request id that the OTP page can pass back.
+    if (Env.mockApi) {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      return 'mock-otp-request-id';
+    }
     final Map<String, dynamic> body = <String, dynamic>{
-      'phoneNumber': _staticPhoneNumber,
+      'phoneNumber': phone.trim(),
       'otpType': _staticOtpType,
     };
 
-    debugPrint(
-      'OTP request -> POST ${_dio.options.baseUrl}${ApiEndpoints.authSendOtp}',
-    );
+    // Backend contract (as provided):
+    // POST /api/v1/auth/otp/request
+    // { phoneNumber, otpType }
+    final List<String> endpoints = <String>[
+      ApiEndpoints.authOtpRequest,
+      ApiEndpoints.authSendOtp,
+      '/api/v1/auth/request-otp', // common alternative on some backends
+      ApiEndpoints.authRequestOtp, // legacy fallback
+    ];
+
+    debugPrint('OTP request -> POST ${_dio.options.baseUrl}${endpoints.first}');
     debugPrint('OTP request body -> $body');
 
     try {
-      final Response<dynamic> response = await _dio.post(
-        ApiEndpoints.authSendOtp,
-        data: body,
+      Response<dynamic>? response;
+      String? usedEndpoint;
+
+      DioException? lastNotFound;
+      for (final String endpoint in endpoints) {
+        try {
+          response = await _dio.post(endpoint, data: body);
+          usedEndpoint = endpoint;
+          break;
+        } on DioException catch (error) {
+          if (error.response?.statusCode == 404) {
+            lastNotFound = error;
+            debugPrint('OTP endpoint not found (404) -> $endpoint');
+            continue;
+          }
+          rethrow;
+        }
+      }
+
+      if (response == null || usedEndpoint == null) {
+        // None of the known endpoints exist on this backend.
+        throw Exception(
+          _mapDioError(
+            lastNotFound ??
+                DioException(
+                  requestOptions: RequestOptions(path: endpoints.first),
+                  response: Response(
+                    requestOptions: RequestOptions(path: endpoints.first),
+                    statusCode: 404,
+                    data: const <String, dynamic>{
+                      'message': 'OTP endpoint not found',
+                    },
+                  ),
+                  type: DioExceptionType.badResponse,
+                ),
+          ),
+        );
+      }
+
+      debugPrint(
+        'OTP response <- [$usedEndpoint] [${response.statusCode}] ${response.data}',
       );
 
-      debugPrint('OTP response <- [${response.statusCode}] ${response.data}');
-
       if (_isOtpRequestSuccessful(response)) {
-        debugPrint('Static OTP for testing -> $_staticOtpCode');
-        return _extractOtpId(response.data) ?? 'static-otp-request';
+        final String? extracted = _extractOtpId(response.data);
+        if (extracted != null && extracted.isNotEmpty) {
+          return extracted;
+        }
+        // Some backends don't return any id and also don't require it for verify.
+        // We still have to provide something to the OTP UI route parameter.
+        return 'no-otp-id';
       }
 
       throw Exception(_extractErrorMessage(response.data));
@@ -165,15 +261,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       debugPrint(
         'OTP dio details <- type=${error.type}, message=${error.message}, error=${error.error}',
       );
-      if (_shouldUseStaticFallback(error)) {
-        debugPrint('OTP fallback -> using static success response');
-        debugPrint('Static OTP for testing -> $_staticOtpCode');
-        return 'static-otp-request';
-      }
       throw Exception(_mapDioError(error));
     } catch (error) {
       debugPrint('OTP unexpected error <- $error');
-      throw Exception('Failed to send OTP.');
+      throw Exception(error.toString().replaceFirst('Exception: ', ''));
     }
   }
 
@@ -199,21 +290,42 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         if (normalized == 'success' || normalized == 'ok') {
           return true;
         }
+        if (normalized == 'failed' ||
+            normalized == 'failure' ||
+            normalized == 'error' ||
+            normalized == 'false') {
+          return false;
+        }
+      }
+      final dynamic error = data['error'];
+      if (error is String && error.trim().isNotEmpty) {
+        return false;
       }
       if (data.containsKey('otpId') ||
           data.containsKey('otp_id') ||
+          data.containsKey('requestId') ||
+          data.containsKey('request_id') ||
           data.containsKey('message')) {
         return true;
       }
     }
 
-    return true;
+    return false;
   }
 
   String? _extractOtpId(dynamic data) {
     if (data is! Map<String, dynamic>) return null;
     final dynamic otpId =
-        data['otpId'] ?? data['otp_id'] ?? data['data']?['otpId'];
+        data['otpId'] ??
+        data['otp_id'] ??
+        data['requestId'] ??
+        data['request_id'] ??
+        data['id'] ??
+        data['data']?['otpId'] ??
+        data['data']?['otp_id'] ??
+        data['data']?['requestId'] ??
+        data['data']?['request_id'] ??
+        data['data']?['id'];
     if (otpId is String && otpId.isNotEmpty) {
       return otpId;
     }
@@ -243,6 +355,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
 
     final int? statusCode = error.response?.statusCode;
+    if (statusCode == 404) {
+      return 'OTP service not available on this server. Please update the app or contact support.';
+    }
     if (statusCode == 400 || statusCode == 422) {
       return 'Invalid phone number.';
     }
@@ -253,15 +368,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return _extractErrorMessage(error.response?.data);
   }
 
-  bool _isVerifyOtpSuccessful(
-    Response<dynamic> response,
-    VerifyOtpResponseModel parsed,
-  ) {
-    final int? statusCode = response.statusCode;
-    if (statusCode != 200 && statusCode != 201) {
-      return false;
+  UserModel? _extractUserFromVerifyJson(Map<String, dynamic> json) {
+    final dynamic userRaw = json['user'];
+    if (userRaw is Map<String, dynamic>) {
+      final String id =
+          (userRaw['userId'] ?? userRaw['id'] ?? userRaw['user_id'] ?? '')
+              .toString();
+      final String phone =
+          (userRaw['phoneNumber'] ?? userRaw['phone'] ?? userRaw['mobile'] ?? '')
+              .toString();
+      if (id.isEmpty && phone.isEmpty) return null;
+      return UserModel(id: id, phone: phone);
     }
-    return parsed.accessToken != null && parsed.accessToken!.isNotEmpty;
+    return null;
   }
 
   String _mapVerifyOtpError(DioException error) {
@@ -282,7 +401,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (normalized.contains('expired')) {
         return 'OTP expired. Please request a new OTP.';
       }
-      return 'Wrong OTP';
+      if (normalized.contains('invalid otp') || normalized.contains('wrong')) {
+        return 'Invalid OTP';
+      }
+      if (message.isNotEmpty) return message;
+      return 'Invalid OTP';
     }
     if (statusCode != null && statusCode >= 500) {
       return 'Server error. Please try again later.';
@@ -291,12 +414,5 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return message;
   }
 
-  bool _shouldUseStaticFallback(DioException error) {
-    if (error.type != DioExceptionType.connectionError) {
-      return false;
-    }
-    final String message = (error.message ?? '').toLowerCase();
-    return message.contains('failed host lookup') ||
-        message.contains('no address associated with hostname');
-  }
+  // (removed unused _shouldUseStaticFallback)
 }

@@ -17,6 +17,7 @@ import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/core/widgets/keyboard_aware_bottom.dart';
 import 'package:goapp/core/di/injection.dart';
 import 'package:goapp/core/service/url_launcher_service.dart';
+import 'package:goapp/core/utils/env.dart';
 
 class RLoginPage extends StatefulWidget {
   const RLoginPage({super.key});
@@ -71,7 +72,9 @@ class _RLoginPageState extends State<RLoginPage> {
                 );
                 SnackBarUtils.show(
                   context,
-                  'Received OTP Successful !! OTP is 5656',
+                  Env.mockApi
+                      ? 'OTP sent (Mock). Use OTP: 5656'
+                      : 'OTP sent successfully. Please check your SMS.',
                 );
               }
               if (state is AuthFailure) {

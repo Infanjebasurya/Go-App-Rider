@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:goapp/core/config/api_config.dart';
@@ -7,6 +9,7 @@ import 'package:goapp/core/storage/auth_token_store.dart';
 import 'package:goapp/core/storage/driver_id_store.dart';
 import 'package:goapp/core/storage/user_cache_model.dart';
 import 'package:goapp/core/storage/user_cache_store.dart';
+import 'package:goapp/core/utils/env.dart';
 import 'package:goapp/features/profile/data/models/get_profile_details_response_model.dart';
 import 'package:goapp/features/profile/data/models/onboarding_get_profile_response_model.dart';
 import 'package:goapp/features/profile/data/models/onboarding_profile_create_response_model.dart';
@@ -16,6 +19,7 @@ import 'package:goapp/features/profile/presentation/widgets/either.dart';
 
 class LocalProfileRepository implements ProfileRepository {
   LocalProfileRepository({Dio? dio}) : _dio = dio ?? _buildDio() {
+    _dio.options.baseUrl = ApiConfig.baseUrl;
     if (dio == null && kDebugMode) {
       _dio.interceptors.add(
         LogInterceptor(
@@ -70,6 +74,9 @@ class LocalProfileRepository implements ProfileRepository {
     };
 
     try {
+      final String accessToken = (AuthTokenStore.accessToken() ?? '').trim();
+      final String tokenType = (AuthTokenStore.tokenType() ?? 'Bearer').trim();
+      _dio.options.baseUrl = ApiConfig.baseUrl;
       if (kDebugMode) {
         debugPrint(
           'Profile API called -> POST '
@@ -77,9 +84,20 @@ class LocalProfileRepository implements ProfileRepository {
         );
         debugPrint('Profile API request body -> $body');
       }
+
+      final Map<String, String> headers = <String, String>{
+        'Connection': 'close',
+      };
+      if (accessToken.isNotEmpty && !accessToken.startsWith('mock-')) {
+        headers['Authorization'] = '$tokenType $accessToken';
+      }
+
       final Response<dynamic> response = await _dio.post(
         ApiEndpoints.onboardingProfile,
         data: body,
+        options: Options(
+          headers: headers,
+        ),
       );
 
       if (response.data is! Map<String, dynamic>) {
@@ -135,10 +153,82 @@ class LocalProfileRepository implements ProfileRepository {
       );
       return Right(profile);
     } on DioException catch (error) {
+      if (Env.mockApi && _shouldFallbackToMockProfileSave(error)) {
+        final Profile profile = await _mockSaveProfile(body: body);
+        return Right(profile);
+      }
       return Left(ServerFailure(_mapDioError(error)));
     } catch (error) {
       return Left(ServerFailure(error.toString()));
     }
+  }
+
+  bool _shouldFallbackToMockProfileSave(DioException error) {
+    if (_shouldUseStaticFallback(error)) return true;
+    if (error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      return true;
+    }
+    final String message = (error.message ?? '').toLowerCase();
+    if (message.contains('connection closed before full header')) {
+      return true;
+    }
+    final int? statusCode = error.response?.statusCode;
+    if (statusCode == 404 && _isNgrokOffline(error)) return true;
+    if (statusCode != null && statusCode >= 500) return true;
+    return false;
+  }
+
+  bool _isNgrokOffline(DioException error) {
+    final int? statusCode = error.response?.statusCode;
+    if (statusCode != 404) return false;
+    final Headers? headers = error.response?.headers;
+    final String? ngrokError = headers?.value('ngrok-error-code');
+    if ((ngrokError ?? '').isNotEmpty) return true;
+    final dynamic data = error.response?.data;
+    if (data is String) {
+      final String body = data.toLowerCase();
+      if (body.contains('err_ngrok') ||
+          body.contains('ngrok') ||
+          body.contains('offline')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<Profile> _mockSaveProfile({required Map<String, dynamic> body}) async {
+    const String driverId = 'DRV7066';
+    const String requestId = 'mock-profile-request';
+
+    await DriverIdStore.saveDriverId(driverId);
+    await DriverIdStore.saveLastProfileRequestId(requestId);
+
+    final existing = UserCacheStore.read();
+    final Profile profile = Profile(
+      id: driverId,
+      name: (body['full_name'] ?? '').toString(),
+      gender: _fromOnboardingGender((body['gender'] ?? '').toString()),
+      refer: '',
+      emergencyContact: '',
+      email: (body['email'] ?? '').toString(),
+      phone: existing?.phone,
+      dob: (body['dob'] ?? '').toString(),
+      rating: existing?.rating ?? 0.0,
+      totalTrips: existing?.totalTrips ?? 0,
+      totalYears: existing?.totalYears ?? 0.0,
+    );
+
+    _cached = profile;
+    await UserCacheStore.save(_toCacheModel(profile));
+    if (kDebugMode) {
+      debugPrint(
+        'Profile mock-saved (fallback) -> driverId=$driverId, requestId=$requestId',
+      );
+    }
+    return profile;
   }
 
   @override
@@ -156,6 +246,13 @@ class LocalProfileRepository implements ProfileRepository {
 
     if (driverId.isNotEmpty && driverId != 'local-profile') {
       try {
+        _dio.options.baseUrl = ApiConfig.baseUrl;
+        final String accessToken = (AuthTokenStore.accessToken() ?? '').trim();
+        if (accessToken.isEmpty) {
+          return Right(localProfile);
+        }
+        final String tokenType =
+            (AuthTokenStore.tokenType() ?? 'Bearer').trim();
         final Map<String, dynamic> body = <String, dynamic>{
           'driverId': driverId,
         };
@@ -167,11 +264,15 @@ class LocalProfileRepository implements ProfileRepository {
           debugPrint('Onboarding Profile API request body -> $body');
         }
 
-        final Response<dynamic> response = await _dio.request(
-          ApiEndpoints.onboardingProfile,
-          data: body,
-          queryParameters: <String, dynamic>{'driverId': driverId},
-          options: Options(method: 'GET'),
+         final Response<dynamic> response = await _dio.request(
+           ApiEndpoints.onboardingProfile,
+           data: body,
+           options: Options(
+             method: 'GET',
+             headers: <String, String>{
+               'Authorization': '$tokenType $accessToken',
+             },
+          ),
         );
 
         if (kDebugMode) {
@@ -227,7 +328,8 @@ class LocalProfileRepository implements ProfileRepository {
         await UserCacheStore.save(_toCacheModel(remoteProfile));
         return Right(remoteProfile);
       } on DioException catch (error) {
-        if (_shouldUseStaticFallback(error)) {
+        if (localProfile != null &&
+            (_shouldUseStaticFallback(error) || _isNgrokOffline(error))) {
           return Right(localProfile);
         }
         return Left(ServerFailure(_mapDioError(error)));
@@ -430,6 +532,12 @@ class LocalProfileRepository implements ProfileRepository {
     if (_shouldUseStaticFallback(error)) {
       return 'Unable to resolve server hostname. Please check your internet/VPN and try again.';
     }
+    final String rawMessage = (error.message ?? '').toLowerCase();
+    final Object? rawError = error.error;
+    if (rawError is HttpException ||
+        rawMessage.contains('connection closed before full header')) {
+      return 'Server closed the connection. This often happens with an invalid/expired token or server downtime.';
+    }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
@@ -440,6 +548,19 @@ class LocalProfileRepository implements ProfileRepository {
       return 'SSL certificate error. Unable to reach the server securely.';
     }
     final int? statusCode = error.response?.statusCode;
+    if (statusCode == 404) {
+      final String? ngrokError = error.response?.headers.value(
+        'ngrok-error-code',
+      );
+      final dynamic data = error.response?.data;
+      final String body = data is String ? data.toLowerCase() : '';
+      if ((ngrokError ?? '').isNotEmpty ||
+          body.contains('err_ngrok') ||
+          body.contains('offline')) {
+        return 'Server is offline (ngrok). Please start the tunnel and try again.';
+      }
+      return 'API endpoint not found (404).';
+    }
     if (statusCode != null && statusCode >= 500) {
       return 'Server error. Please try again later.';
     }
@@ -456,7 +577,7 @@ class LocalProfileRepository implements ProfileRepository {
   static Dio _buildDio() {
     return Dio(
       BaseOptions(
-        baseUrl: ApiConfig.uatBaseUrl,
+        baseUrl: ApiConfig.baseUrl,
         connectTimeout: const Duration(seconds: 20),
         receiveTimeout: const Duration(seconds: 20),
         headers: const <String, String>{

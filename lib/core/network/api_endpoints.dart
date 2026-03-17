@@ -1,5 +1,6 @@
 class ApiEndpoints {
   static const String authSendOtp = '/api/v1/auth/send-otp';
+  static const String authOtpRequest = '/api/v1/auth/otp/request';
   static const String authVerifyOtp = '/api/v1/auth/otp/verify';
   static const String authLogin = '/auth/login';
   static const String authRequestOtp = '/auth/request-otp';
