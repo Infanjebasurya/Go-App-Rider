@@ -5,5 +5,6 @@ class ApiEndpoints {
   static const String authRequestOtp = '/auth/request-otp';
   static const String authResendOtp = '/auth/resend-otp';
   static const String profileCreate = '/api/v1/profile/create';
+  static const String vehicleTypes = '/api/v1/vehicles/types';
   static const String captainProfile = '/v1/captain/profile';
 }
