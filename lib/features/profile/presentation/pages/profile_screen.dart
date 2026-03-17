@@ -51,7 +51,21 @@ class _ProfileView extends StatelessWidget {
         ),
       ),
       body: BlocConsumer<ProfileEditCubit, ProfileEditState>(
+        listenWhen: (previous, current) {
+          final isLogoutFlow = current.status == ProfileEditStatus.loggedOut ||
+              current.status == ProfileEditStatus.deleted;
+          final didChangeMessage =
+              previous.errorMessage != current.errorMessage &&
+              current.errorMessage != null;
+          return isLogoutFlow || didChangeMessage;
+        },
         listener: (BuildContext context, ProfileEditState state) {
+          final message = state.errorMessage;
+          if (message != null && message.trim().isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message.trim())),
+            );
+          }
           if (state.status == ProfileEditStatus.loggedOut ||
               state.status == ProfileEditStatus.deleted) {
             final isDelete = state.status == ProfileEditStatus.deleted;
@@ -65,16 +79,59 @@ class _ProfileView extends StatelessWidget {
           }
         },
         builder: (BuildContext context, ProfileEditState state) {
-          if (state.status == ProfileEditStatus.loading ||
-              state.status == ProfileEditStatus.initial) {
+          if ((state.status == ProfileEditStatus.loading ||
+                  state.status == ProfileEditStatus.initial) &&
+              state.data == null) {
             return const Center(
               child: CircularProgressIndicator(color: AuthUiColors.brandGreen),
             );
           }
-          if (state.data == null) {
-            return const Center(child: Text('Failed to load profile.'));
+          if (state.status == ProfileEditStatus.error && state.data == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      state.errorMessage?.trim().isNotEmpty == true
+                          ? state.errorMessage!.trim()
+                          : 'Failed to load profile.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () =>
+                          context.read<ProfileEditCubit>().loadProfile(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
-          return _ProfileBody(data: state.data!);
+          if (state.data == null) {
+            return const Center(child: Text('Profile not found.'));
+          }
+          return Stack(
+            children: [
+              _ProfileBody(data: state.data!),
+              if (state.status == ProfileEditStatus.loading)
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: LinearProgressIndicator(
+                    minHeight: 2,
+                    color: AuthUiColors.brandGreen,
+                  ),
+                ),
+            ],
+          );
         },
       ),
     );

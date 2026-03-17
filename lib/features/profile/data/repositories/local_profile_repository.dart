@@ -4,28 +4,29 @@ import 'package:goapp/core/config/api_config.dart';
 import 'package:goapp/core/error/failures.dart';
 import 'package:goapp/core/network/api_endpoints.dart';
 import 'package:goapp/core/storage/auth_token_store.dart';
-import 'package:goapp/core/storage/registration_progress_store.dart';
+import 'package:goapp/core/storage/driver_id_store.dart';
 import 'package:goapp/core/storage/user_cache_model.dart';
 import 'package:goapp/core/storage/user_cache_store.dart';
 import 'package:goapp/features/profile/data/models/get_profile_details_response_model.dart';
+import 'package:goapp/features/profile/data/models/onboarding_get_profile_response_model.dart';
+import 'package:goapp/features/profile/data/models/onboarding_profile_create_response_model.dart';
 import 'package:goapp/features/profile/domain/entities/profile.dart';
 import 'package:goapp/features/profile/domain/repositories/profile_repository.dart';
 import 'package:goapp/features/profile/presentation/widgets/either.dart';
 
 class LocalProfileRepository implements ProfileRepository {
-  LocalProfileRepository({Dio? dio})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: ApiConfig.uatBaseUrl,
-              connectTimeout: const Duration(seconds: 20),
-              receiveTimeout: const Duration(seconds: 20),
-              headers: const <String, String>{
-                'Content-Type': 'application/json',
-              },
-            ),
-          );
+  LocalProfileRepository({Dio? dio}) : _dio = dio ?? _buildDio() {
+    if (dio == null && kDebugMode) {
+      _dio.interceptors.add(
+        LogInterceptor(
+          request: true,
+          requestBody: true,
+          responseBody: true,
+          error: true,
+        ),
+      );
+    }
+  }
 
   Profile? _cached;
   final Dio _dio;
@@ -56,65 +57,75 @@ class LocalProfileRepository implements ProfileRepository {
     final String dobValue = trimmedDob.isEmpty
         ? (existing?.dob ?? '')
         : trimmedDob;
-    final RegistrationProgress progress =
-        await RegistrationProgressStore.load();
-    final String city = (progress.cityId ?? 'Chennai').trim();
-    if (city.isEmpty) {
-      return const Left(ServerFailure('City is required.'));
-    }
 
+    final String trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty) {
+      return const Left(ServerFailure('Email is required.'));
+    }
     final Map<String, dynamic> body = <String, dynamic>{
-      'fullName': trimmedName,
-      if (email.trim().isNotEmpty) 'email': email.trim(),
-      'gender': trimmedGender,
-      'dateOfBirth': _toApiDate(trimmedDob),
-      if (refer.trim().isNotEmpty) 'referralCode': refer.trim(),
-      'city': city,
+      'full_name': trimmedName,
+      'email': trimmedEmail,
+      'dob': _toApiDate(trimmedDob),
+      'gender': _toOnboardingGender(trimmedGender),
     };
 
-    final String? accessToken = AuthTokenStore.accessToken();
-    if (accessToken == null || accessToken.isEmpty) {
-      final Profile localProfile = _buildLocalProfile(
-        existing: existing,
-        name: trimmedName,
-        email: email,
-        gender: trimmedGender,
-        dobValue: dobValue,
-        refer: refer,
-        emergencyContact: emergencyContact,
-      );
-      _cached = localProfile;
-      await UserCacheStore.save(_toCacheModel(localProfile));
-      return Right(localProfile);
-    }
-
     try {
+      if (kDebugMode) {
+        debugPrint(
+          'Profile API called -> POST '
+          '${_dio.options.baseUrl}${ApiEndpoints.onboardingProfile}',
+        );
+        debugPrint('Profile API request body -> $body');
+      }
       final Response<dynamic> response = await _dio.post(
-        ApiEndpoints.profileCreate,
+        ApiEndpoints.onboardingProfile,
         data: body,
-        options: Options(
-          headers: <String, String>{'Authorization': 'Bearer $accessToken'},
-        ),
       );
 
       if (response.data is! Map<String, dynamic>) {
         return const Left(ServerFailure('Invalid profile response.'));
       }
 
-      final GetProfileDetailsResponseModel parsed =
-          GetProfileDetailsResponseModel.fromJson(
+      final OnboardingProfileCreateResponseModel parsed =
+          OnboardingProfileCreateResponseModel.fromJson(
             response.data as Map<String, dynamic>,
           );
-      final Profile profile = parsed.profile.toEntity().copyWith(
+
+      if (kDebugMode) {
+        debugPrint('Profile API response -> ${response.data}');
+      }
+
+      if (!parsed.success) {
+        final message = parsed.message.trim().isEmpty
+            ? 'Failed to save profile.'
+            : parsed.message.trim();
+        return Left(ServerFailure(message));
+      }
+
+      final String driverId = (parsed.driverId ?? '').trim();
+      if (driverId.isEmpty) {
+        return const Left(
+          ServerFailure('Invalid profile response (driverId missing).'),
+        );
+      }
+
+      await DriverIdStore.saveDriverId(driverId);
+      if ((parsed.requestId ?? '').trim().isNotEmpty) {
+        await DriverIdStore.saveLastProfileRequestId(parsed.requestId!);
+      }
+
+      final Profile profile = Profile(
+        id: driverId,
         name: trimmedName,
         gender: trimmedGender,
         refer: refer.trim(),
         emergencyContact: emergencyContact.trim(),
-        email: email.trim().isEmpty ? null : email.trim(),
-        phone: (parsed.profile.phone?.isEmpty ?? true)
-            ? existing?.phone
-            : parsed.profile.phone,
-        dob: _toApiDate(trimmedDob),
+        email: trimmedEmail.isEmpty ? null : trimmedEmail,
+        phone: existing?.phone,
+        dob: dobValue.isEmpty ? null : dobValue,
+        rating: existing?.rating ?? 0.0,
+        totalTrips: existing?.totalTrips ?? 0,
+        totalYears: existing?.totalYears ?? 0.0,
       );
 
       _cached = profile;
@@ -124,23 +135,6 @@ class LocalProfileRepository implements ProfileRepository {
       );
       return Right(profile);
     } on DioException catch (error) {
-      if (_shouldUseStaticFallback(error)) {
-        final Profile localProfile = _buildLocalProfile(
-          existing: existing,
-          name: trimmedName,
-          email: email,
-          gender: trimmedGender,
-          dobValue: _toApiDate(trimmedDob),
-          refer: refer,
-          emergencyContact: emergencyContact,
-        );
-        _cached = localProfile;
-        await UserCacheStore.save(_toCacheModel(localProfile));
-        debugPrint(
-          'Profile created locally (fallback) -> driverId=${localProfile.id}, fullName=${localProfile.name}',
-        );
-        return Right(localProfile);
-      }
       return Left(ServerFailure(_mapDioError(error)));
     } catch (error) {
       return Left(ServerFailure(error.toString()));
@@ -154,6 +148,93 @@ class LocalProfileRepository implements ProfileRepository {
         ? _cached
         : _fromCacheModel(stored);
     _cached = localProfile;
+
+    final String storedDriverId = (DriverIdStore.driverId() ?? '').trim();
+    final String localDriverId = (localProfile?.id ?? '').trim();
+    final String driverId =
+        storedDriverId.isNotEmpty ? storedDriverId : localDriverId;
+
+    if (driverId.isNotEmpty && driverId != 'local-profile') {
+      try {
+        final Map<String, dynamic> body = <String, dynamic>{
+          'driverId': driverId,
+        };
+        if (kDebugMode) {
+          debugPrint(
+            'Onboarding Profile API called -> GET '
+            '${_dio.options.baseUrl}${ApiEndpoints.onboardingProfile}',
+          );
+          debugPrint('Onboarding Profile API request body -> $body');
+        }
+
+        final Response<dynamic> response = await _dio.request(
+          ApiEndpoints.onboardingProfile,
+          data: body,
+          queryParameters: <String, dynamic>{'driverId': driverId},
+          options: Options(method: 'GET'),
+        );
+
+        if (kDebugMode) {
+          debugPrint('Onboarding Profile API response -> ${response.data}');
+        }
+
+        if (response.data is! Map<String, dynamic>) {
+          return const Left(ServerFailure('Invalid profile response.'));
+        }
+
+        final OnboardingGetProfileResponseModel parsed =
+            OnboardingGetProfileResponseModel.fromJson(
+              response.data as Map<String, dynamic>,
+            );
+
+        if (!parsed.success) {
+          final message = (parsed.message ?? '').trim();
+          return Left(
+            ServerFailure(
+              message.isEmpty ? 'Failed to fetch profile.' : message,
+            ),
+          );
+        }
+
+        final data = parsed.data;
+        if (data == null) {
+          return const Left(
+            ServerFailure('Invalid profile response (data missing).'),
+          );
+        }
+
+        final resolvedDriverId = data.driverId.trim().isEmpty
+            ? driverId
+            : data.driverId.trim();
+
+        await DriverIdStore.saveDriverId(resolvedDriverId);
+
+        final Profile remoteProfile = Profile(
+          id: resolvedDriverId,
+          name: data.fullName.trim(),
+          gender: _fromOnboardingGender(data.gender),
+          refer: localProfile?.refer ?? '',
+          emergencyContact: localProfile?.emergencyContact ?? '',
+          email: data.email.trim().isEmpty ? null : data.email.trim(),
+          phone: localProfile?.phone,
+          dob: data.dob.trim().isEmpty ? null : data.dob.trim(),
+          rating: localProfile?.rating ?? 0.0,
+          totalTrips: localProfile?.totalTrips ?? 0,
+          totalYears: localProfile?.totalYears ?? 0.0,
+        );
+
+        _cached = remoteProfile;
+        await UserCacheStore.save(_toCacheModel(remoteProfile));
+        return Right(remoteProfile);
+      } on DioException catch (error) {
+        if (_shouldUseStaticFallback(error)) {
+          return Right(localProfile);
+        }
+        return Left(ServerFailure(_mapDioError(error)));
+      } catch (error) {
+        return Left(ServerFailure(error.toString()));
+      }
+    }
 
     final String? accessToken = AuthTokenStore.accessToken();
     if (accessToken == null || accessToken.isEmpty) {
@@ -233,30 +314,6 @@ class LocalProfileRepository implements ProfileRepository {
     );
   }
 
-  Profile _buildLocalProfile({
-    required LocalUserCacheModel? existing,
-    required String name,
-    required String email,
-    required String gender,
-    required String dobValue,
-    required String refer,
-    required String emergencyContact,
-  }) {
-    return Profile(
-      id: existing?.id.isNotEmpty == true ? existing!.id : 'local-profile',
-      name: name,
-      gender: gender,
-      refer: refer.trim(),
-      emergencyContact: emergencyContact.trim(),
-      email: email.trim().isEmpty ? null : email.trim(),
-      phone: existing?.phone,
-      dob: dobValue,
-      rating: existing?.rating ?? 0.0,
-      totalTrips: existing?.totalTrips ?? 0,
-      totalYears: existing?.totalYears ?? 0.0,
-    );
-  }
-
   Profile _mergeProfiles({required Profile remote, required Profile? local}) {
     return Profile(
       id: remote.id.isNotEmpty ? remote.id : (local?.id ?? ''),
@@ -323,6 +380,43 @@ class LocalProfileRepository implements ProfileRepository {
     return null;
   }
 
+  String _toOnboardingGender(String value) {
+    final normalized = value.trim().toLowerCase();
+    switch (normalized) {
+      case 'male':
+      case 'm':
+      case 'man':
+      case 'boy':
+      case 'male.':
+        return 'male';
+      case 'female':
+      case 'f':
+      case 'woman':
+      case 'girl':
+      case 'female.':
+        return 'female';
+      case 'others':
+      case 'other':
+      case 'prefer not to say':
+      default:
+        return 'other';
+    }
+  }
+
+  String _fromOnboardingGender(String value) {
+    final normalized = value.trim().toLowerCase();
+    switch (normalized) {
+      case 'male':
+        return 'Male';
+      case 'female':
+        return 'Female';
+      case 'other':
+      case 'others':
+      default:
+        return 'Others';
+    }
+  }
+
   bool _shouldUseStaticFallback(DioException error) {
     if (error.type != DioExceptionType.connectionError) {
       return false;
@@ -333,6 +427,9 @@ class LocalProfileRepository implements ProfileRepository {
   }
 
   String _mapDioError(DioException error) {
+    if (_shouldUseStaticFallback(error)) {
+      return 'Unable to resolve server hostname. Please check your internet/VPN and try again.';
+    }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
@@ -354,5 +451,19 @@ class LocalProfileRepository implements ProfileRepository {
       }
     }
     return 'Failed to save profile.';
+  }
+
+  static Dio _buildDio() {
+    return Dio(
+      BaseOptions(
+        baseUrl: ApiConfig.uatBaseUrl,
+        connectTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 20),
+        headers: const <String, String>{
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
   }
 }
