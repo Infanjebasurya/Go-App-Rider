@@ -57,6 +57,22 @@ class DocumentProgressStore {
     DocumentType.bankDetails: null,
   };
 
+  static final Map<DocumentType, String?> _documentId = {
+    DocumentType.drivingLicense: null,
+    DocumentType.vehicleRC: null,
+    DocumentType.aadhaarCard: null,
+    DocumentType.panCard: null,
+    DocumentType.bankDetails: null,
+  };
+
+  static final Map<DocumentType, String?> _expiryDate = {
+    DocumentType.drivingLicense: null,
+    DocumentType.vehicleRC: null,
+    DocumentType.aadhaarCard: null,
+    DocumentType.panCard: null,
+    DocumentType.bankDetails: null,
+  };
+
   static final Map<DocumentType, String?> _previousDocumentNumber = {
     DocumentType.drivingLicense: null,
     DocumentType.vehicleRC: null,
@@ -149,6 +165,22 @@ class DocumentProgressStore {
       }
     }
 
+    final documentIdRaw = json['documentId'];
+    if (documentIdRaw is Map<String, dynamic>) {
+      for (final type in DocumentType.values) {
+        final value = documentIdRaw[type.name];
+        _documentId[type] = value is String && value.isNotEmpty ? value : null;
+      }
+    }
+
+    final expiryRaw = json['expiryDate'];
+    if (expiryRaw is Map<String, dynamic>) {
+      for (final type in DocumentType.values) {
+        final value = expiryRaw[type.name];
+        _expiryDate[type] = value is String && value.isNotEmpty ? value : null;
+      }
+    }
+
     final previousNumberRaw = json['previousDocumentNumber'];
     if (previousNumberRaw is Map<String, dynamic>) {
       for (final type in DocumentType.values) {
@@ -185,6 +217,8 @@ class DocumentProgressStore {
       'previousFrontImagePath': mapByType(_previousFrontImagePath),
       'previousBackImagePath': mapByType(_previousBackImagePath),
       'documentNumber': mapByType(_documentNumber),
+      'documentId': mapByType(_documentId),
+      'expiryDate': mapByType(_expiryDate),
       'previousDocumentNumber': mapByType(_previousDocumentNumber),
       'bankDraft': Map<String, String>.from(_bankDraft),
       'profileImagePath': _profileImagePath,
@@ -244,12 +278,30 @@ class DocumentProgressStore {
     return _documentNumber[type];
   }
 
+  static String? documentId(DocumentType type) {
+    return _documentId[type];
+  }
+
+  static String? expiryDate(DocumentType type) {
+    return _expiryDate[type];
+  }
+
   static String? previousDocumentNumber(DocumentType type) {
     return _previousDocumentNumber[type];
   }
 
   static void setDocumentNumber(DocumentType type, String? number) {
     _documentNumber[type] = number;
+    _persist();
+  }
+
+  static void setDocumentId(DocumentType type, String? id) {
+    _documentId[type] = id;
+    _persist();
+  }
+
+  static void setExpiryDate(DocumentType type, String? value) {
+    _expiryDate[type] = value;
     _persist();
   }
 
@@ -290,6 +342,8 @@ class DocumentProgressStore {
     _frontImagePath.updateAll((_, _) => null);
     _backImagePath.updateAll((_, _) => null);
     _documentNumber.updateAll((_, _) => null);
+    _documentId.updateAll((_, _) => null);
+    _expiryDate.updateAll((_, _) => null);
     _previousFrontImagePath.updateAll((_, _) => null);
     _previousBackImagePath.updateAll((_, _) => null);
     _previousDocumentNumber.updateAll((_, _) => null);

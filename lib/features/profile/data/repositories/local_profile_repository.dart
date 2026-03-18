@@ -251,9 +251,12 @@ class LocalProfileRepository implements ProfileRepository {
         if (accessToken.isEmpty) {
           return Right(localProfile);
         }
+        if (Env.mockApi || accessToken.startsWith('mock-')) {
+          return Right(localProfile);
+        }
         final String tokenType =
             (AuthTokenStore.tokenType() ?? 'Bearer').trim();
-        final Map<String, dynamic> body = <String, dynamic>{
+        final Map<String, dynamic> query = <String, dynamic>{
           'driverId': driverId,
         };
         if (kDebugMode) {
@@ -261,17 +264,16 @@ class LocalProfileRepository implements ProfileRepository {
             'Onboarding Profile API called -> GET '
             '${_dio.options.baseUrl}${ApiEndpoints.onboardingProfile}',
           );
-          debugPrint('Onboarding Profile API request body -> $body');
+          debugPrint('Onboarding Profile API query -> $query');
         }
 
-         final Response<dynamic> response = await _dio.request(
-           ApiEndpoints.onboardingProfile,
-           data: body,
-           options: Options(
-             method: 'GET',
-             headers: <String, String>{
-               'Authorization': '$tokenType $accessToken',
-             },
+        final Response<dynamic> response = await _dio.get(
+          ApiEndpoints.onboardingProfile,
+          queryParameters: query,
+          options: Options(
+            headers: <String, String>{
+              'Authorization': '$tokenType $accessToken',
+            },
           ),
         );
 

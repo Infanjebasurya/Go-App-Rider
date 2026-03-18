@@ -13,7 +13,8 @@
     return OnboardingProgressStepModel(
       id: (json['id'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
-      isCompleted: _parseBool(json['is_completed'] ?? json['isCompleted']) ?? false,
+      isCompleted:
+          _parseBool(json['is_completed'] ?? json['isCompleted']) ?? false,
     );
   }
 
@@ -58,8 +59,13 @@ class OnboardingProgressResponseModel {
         : int.tryParse(completionRaw?.toString() ?? '') ?? 0;
 
     return OnboardingProgressResponseModel(
-      success: OnboardingProgressStepModel._parseBool(json['success'] ?? json['status']) ?? false,
-      overallStatus: (json['overall_status'] ?? json['overallStatus'])?.toString(),
+      success:
+          OnboardingProgressStepModel._parseBool(
+            json['success'] ?? json['status'],
+          ) ??
+          false,
+      overallStatus:
+          (json['overall_status'] ?? json['overallStatus'])?.toString(),
       steps: parsedSteps,
       completionPercentage: completion.clamp(0, 100),
     );

@@ -40,8 +40,13 @@ import 'package:goapp/features/home/presentation/cubit/home_cubit.dart';
 import 'package:goapp/features/home/presentation/cubit/trip_navigation_cubit.dart';
 import 'package:goapp/features/documents/presentation/cubit/documents_cubit.dart';
 import 'package:goapp/features/documents/presentation/cubit/document_upload_cubit.dart';
+import 'package:goapp/features/documents/data/datasources/driving_license_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/profile_image_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/vehicle_rc_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/document_details_remote_data_source.dart';
 import 'package:goapp/features/documents/presentation/services/document_upload_file_service.dart';
 import 'package:goapp/features/document_verify/presentation/cubit/verification_cubit.dart';
+import 'package:goapp/features/document_verify/data/datasources/submit_all_documents_remote_data_source.dart';
 import 'package:goapp/features/demand_planner/data/datasources/demand_planner_mock_api.dart';
 import 'package:goapp/features/demand_planner/presentation/cubit/demand_planner_cubit.dart';
 import 'package:goapp/features/earnings/data/datasources/earnings_wallet_mock_api.dart';
@@ -410,14 +415,34 @@ void _registerDemandPlanner() {
 
 void _registerDocuments() {
   sl
+    ..registerLazySingleton<DrivingLicenseUploadRemoteDataSource>(
+      () => DrivingLicenseUploadRemoteDataSourceImpl(),
+    )
+    ..registerLazySingleton<ProfileImageUploadRemoteDataSource>(
+      () => ProfileImageUploadRemoteDataSourceImpl(),
+    )
+    ..registerLazySingleton<VehicleRcUploadRemoteDataSource>(
+      () => VehicleRcUploadRemoteDataSourceImpl(),
+    )
+    ..registerLazySingleton<DocumentDetailsRemoteDataSource>(
+      () => DocumentDetailsRemoteDataSourceImpl(),
+    )
+    ..registerLazySingleton<SubmitAllDocumentsRemoteDataSource>(
+      () => SubmitAllDocumentsRemoteDataSourceImpl(),
+    )
     ..registerFactory<DocumentsCubit>(() => DocumentsCubit())
-    ..registerFactory<VerificationCubit>(() => VerificationCubit())
+    ..registerFactory<VerificationCubit>(
+      () => VerificationCubit(submitAllDataSource: sl()),
+    )
     ..registerFactoryParam<DocumentUploadCubit, int, void>(
       (initialStepIndex, _) => DocumentUploadCubit(
         initialStepIndex: initialStepIndex,
         imagePickerService: sl(),
         filePickerService: sl(),
         fileService: sl(),
+        drivingLicenseUploadRemoteDataSource: sl(),
+        profileImageUploadRemoteDataSource: sl(),
+        vehicleRcUploadRemoteDataSource: sl(),
       ),
     );
 }

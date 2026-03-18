@@ -10,10 +10,89 @@ import 'package:goapp/core/service/path_provider_service.dart';
 import 'package:goapp/features/document_verify/presentation/cubit/verification_cubit.dart';
 import 'package:goapp/features/document_verify/presentation/model/document_model.dart';
 import 'package:goapp/features/document_verify/presentation/model/document_progress_store.dart';
+import 'package:goapp/features/document_verify/data/datasources/submit_all_documents_remote_data_source.dart';
+import 'package:goapp/features/document_verify/data/models/submit_for_review_models.dart';
 import 'package:goapp/features/documents/presentation/cubit/document_upload_cubit.dart';
+import 'package:goapp/features/documents/data/datasources/driving_license_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/profile_image_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/vehicle_rc_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/models/document_upload_api_response_models.dart';
+import 'package:goapp/features/documents/data/models/profile_image_upload_response_model.dart';
 import 'package:goapp/features/documents/presentation/services/document_upload_file_service.dart';
 import 'package:goapp/features/documents/presentation/pages/document_upload_screen.dart';
 import 'package:goapp/core/di/injection.dart';
+
+class _FakeDrivingLicenseUploadRemoteDataSource
+    implements DrivingLicenseUploadRemoteDataSource {
+  const _FakeDrivingLicenseUploadRemoteDataSource();
+
+  @override
+  Future<UploadDrivingLicenseResponseModel> upload({
+    required String driverId,
+    required String filePath,
+    required String dlNumber,
+    required String expiryDate,
+  }) async {
+    return const UploadDrivingLicenseResponseModel(
+      success: true,
+      documentId: 'dl_doc_test_001',
+      fileUrl: '/api/v1/documents/file/test_license.png',
+      status: 'pending',
+      message: 'Driving license uploaded successfully.',
+    );
+  }
+}
+
+class _FakeProfileImageUploadRemoteDataSource
+    implements ProfileImageUploadRemoteDataSource {
+  const _FakeProfileImageUploadRemoteDataSource();
+
+  @override
+  Future<ProfileImageUploadResponseModel> upload({required String filePath}) {
+    return Future<ProfileImageUploadResponseModel>.value(
+      const ProfileImageUploadResponseModel(
+        success: true,
+        requestId: 'profile_request_test_001',
+        message: 'Profile image uploaded successfully.',
+      ),
+    );
+  }
+}
+
+class _FakeVehicleRcUploadRemoteDataSource implements VehicleRcUploadRemoteDataSource {
+  const _FakeVehicleRcUploadRemoteDataSource();
+
+  @override
+  Future<UploadVehicleRcResponseModel> upload({
+    required String filePath,
+    required String rcNumber,
+  }) async {
+    return const UploadVehicleRcResponseModel(
+      success: true,
+      documentId: 'rc_doc_test_001',
+      fileUrl: '/api/v1/documents/file/test_rc.png',
+      status: 'pending',
+      message: 'Vehicle RC uploaded successfully.',
+    );
+  }
+}
+
+class _FakeSubmitAllDocumentsRemoteDataSource
+    implements SubmitAllDocumentsRemoteDataSource {
+  const _FakeSubmitAllDocumentsRemoteDataSource();
+
+  @override
+  Future<SubmitForReviewResponseModel> submitAll({
+    required bool declarationAccepted,
+  }) async {
+    return const SubmitForReviewResponseModel(
+      success: true,
+      submissionId: 'SUB-TEST-0001',
+      status: 'SUBMITTED',
+      message: 'All documents submitted successfully for verification.',
+    );
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +122,11 @@ void main() {
             pathProvider: PathProviderService(),
             permissionService: const PermissionService(),
           ),
+          drivingLicenseUploadRemoteDataSource:
+              const _FakeDrivingLicenseUploadRemoteDataSource(),
+          profileImageUploadRemoteDataSource:
+              const _FakeProfileImageUploadRemoteDataSource(),
+          vehicleRcUploadRemoteDataSource: const _FakeVehicleRcUploadRemoteDataSource(),
         );
       });
     }
@@ -114,6 +198,11 @@ void main() {
           pathProvider: PathProviderService(),
           permissionService: const PermissionService(),
         ),
+        drivingLicenseUploadRemoteDataSource:
+            const _FakeDrivingLicenseUploadRemoteDataSource(),
+        profileImageUploadRemoteDataSource:
+            const _FakeProfileImageUploadRemoteDataSource(),
+        vehicleRcUploadRemoteDataSource: const _FakeVehicleRcUploadRemoteDataSource(),
       );
     }
 
@@ -140,20 +229,21 @@ void main() {
       expect(DocumentProgressStore.isProfileImageUploaded(), isTrue);
     });
 
-    test('does not navigate until front and back are captured', () async {
+    test('does not navigate until required fields are provided', () async {
       final cubit = createCubit(1);
       addTearDown(cubit.close);
 
       cubit.updateDocumentNumber('MH1220180012345');
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 1);
-      expect(cubit.state.currentDocStep.numberError, isNotNull);
+      expect(cubit.state.currentDocStep.imageError, isNotNull);
 
       await cubit.captureFront(source: AppImageSource.gallery);
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 1);
+      expect(cubit.state.currentDocStep.expiryDateError, isNotNull);
 
-      await cubit.captureBack(source: AppImageSource.gallery);
+      cubit.updateExpiryDate(DateTime(2035, 12, 31));
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 2);
     });
@@ -163,7 +253,7 @@ void main() {
       addTearDown(cubit.close);
 
       await cubit.captureFront(source: AppImageSource.gallery);
-      await cubit.captureBack(source: AppImageSource.gallery);
+      cubit.updateExpiryDate(DateTime(2035, 12, 31));
       cubit.updateDocumentNumber('abc123');
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 1);
@@ -179,7 +269,6 @@ void main() {
       addTearDown(cubit.close);
 
       await cubit.captureFront(source: AppImageSource.gallery);
-      await cubit.captureBack(source: AppImageSource.gallery);
       cubit.updateDocumentNumber('12345');
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 2);
@@ -255,6 +344,7 @@ void main() {
       await licenseCubit.captureFront(source: AppImageSource.gallery);
       await licenseCubit.captureBack(source: AppImageSource.gallery);
       licenseCubit.updateDocumentNumber('mh 12-2018 0012345');
+      licenseCubit.updateExpiryDate(DateTime(2035, 12, 31));
       await licenseCubit.saveAndNext();
       expect(licenseCubit.state.steps[1].documentNumber, 'MH1220180012345');
 
@@ -262,7 +352,6 @@ void main() {
       addTearDown(rcCubit.close);
 
       await rcCubit.captureFront(source: AppImageSource.gallery);
-      await rcCubit.captureBack(source: AppImageSource.gallery);
       rcCubit.updateDocumentNumber('tn 01 ab 1234');
       await rcCubit.saveAndNext();
       expect(rcCubit.state.steps[2].documentNumber, 'TN01AB1234');
@@ -277,6 +366,7 @@ void main() {
         await uploadCubit.captureFront(source: AppImageSource.gallery);
         await uploadCubit.captureBack(source: AppImageSource.gallery);
         uploadCubit.updateDocumentNumber('MH1220180012345');
+        uploadCubit.updateExpiryDate(DateTime(2035, 12, 31));
         await uploadCubit.saveAndNext();
 
         expect(uploadCubit.state.currentStepIndex, 2);
@@ -285,7 +375,9 @@ void main() {
           isTrue,
         );
 
-        final verificationCubit = VerificationCubit();
+        final verificationCubit = VerificationCubit(
+          submitAllDataSource: const _FakeSubmitAllDocumentsRemoteDataSource(),
+        );
         addTearDown(verificationCubit.close);
 
         final drivingLicenseDoc = verificationCubit.state.documents.firstWhere(
@@ -307,7 +399,9 @@ void main() {
       }
       DocumentProgressStore.setProfileImagePath(null);
 
-      final cubit = VerificationCubit();
+      final cubit = VerificationCubit(
+        submitAllDataSource: const _FakeSubmitAllDocumentsRemoteDataSource(),
+      );
       addTearDown(cubit.close);
 
       await cubit.submitForReview();

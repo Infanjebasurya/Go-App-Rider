@@ -49,7 +49,10 @@ bool _validateDocStep(DocumentUploadCubit cubit) {
     return false;
   }
 
-  final bool requiresBackSide = step.step != DocumentStep.identityPan;
+  final bool requiresBackSide =
+      step.step != DocumentStep.identityPan &&
+      step.step != DocumentStep.drivingLicense &&
+      step.step != DocumentStep.vehicleRC;
   if (!step.frontCaptured || (requiresBackSide && !step.backCaptured)) {
     final updated = step.copyWith(
       numberError: requiresBackSide
@@ -90,10 +93,30 @@ bool _validateDocStep(DocumentUploadCubit cubit) {
     return false;
   }
 
+  if (step.step == DocumentStep.drivingLicense) {
+    final String expiry = step.expiryDate.trim();
+    if (expiry.isEmpty) {
+      final updated = step.copyWith(expiryDateError: 'Expiry date is required');
+      cubit._emitState(cubit.state.copyWithDocStep(updated));
+      DocumentProgressStore.setCompleted(DocumentType.drivingLicense, false);
+      return false;
+    }
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(expiry) ||
+        DateTime.tryParse(expiry) == null) {
+      final updated = step.copyWith(
+        expiryDateError: 'Enter expiry date as YYYY-MM-DD',
+      );
+      cubit._emitState(cubit.state.copyWithDocStep(updated));
+      DocumentProgressStore.setCompleted(DocumentType.drivingLicense, false);
+      return false;
+    }
+  }
+
   if (normalized != step.documentNumber) {
     final updated = step.copyWith(
       documentNumber: normalized,
       clearError: true,
+      clearExpiryError: true,
       clearImageError: true,
     );
     cubit._emitState(cubit.state.copyWithDocStep(updated));
@@ -103,7 +126,10 @@ bool _validateDocStep(DocumentUploadCubit cubit) {
       cubit.state.copyWithDocStep(step.copyWith(clearImageError: true)),
     );
   }
-  DocumentProgressStore.setCompleted(cubit._mapStepToDocType(step.step), true);
+  if (step.step != DocumentStep.drivingLicense &&
+      step.step != DocumentStep.vehicleRC) {
+    DocumentProgressStore.setCompleted(cubit._mapStepToDocType(step.step), true);
+  }
   return true;
 }
 
@@ -217,6 +243,54 @@ Future<void> _saveAndNext(DocumentUploadCubit cubit) async {
       cubit._emitState(cubit.state.copyWith(isSubmitting: false));
       return;
     }
+
+    if (cubit.state.currentDocStep.step == DocumentStep.profilePhoto) {
+      try {
+        await cubit._uploadProfileImageAndContinue();
+      } catch (e) {
+        cubit._emitState(
+          cubit.state.copyWith(
+            isSubmitting: false,
+            statusMessage: e.toString().replaceFirst('Exception: ', '').trim(),
+            statusIsError: true,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (cubit.state.currentDocStep.step == DocumentStep.drivingLicense) {
+      try {
+        await cubit._uploadDrivingLicenseAndContinue();
+      } catch (e) {
+        DocumentProgressStore.setCompleted(DocumentType.drivingLicense, false);
+        cubit._emitState(
+          cubit.state.copyWith(
+            isSubmitting: false,
+            statusMessage: e.toString().replaceFirst('Exception: ', '').trim(),
+            statusIsError: true,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (cubit.state.currentDocStep.step == DocumentStep.vehicleRC) {
+      try {
+        await cubit._uploadVehicleRcAndContinue();
+      } catch (e) {
+        DocumentProgressStore.setCompleted(DocumentType.vehicleRC, false);
+        cubit._emitState(
+          cubit.state.copyWith(
+            isSubmitting: false,
+            statusMessage: e.toString().replaceFirst('Exception: ', '').trim(),
+            statusIsError: true,
+          ),
+        );
+      }
+      return;
+    }
+
     cubit._emitState(
       cubit.state.copyWith(
         isSubmitting: false,
