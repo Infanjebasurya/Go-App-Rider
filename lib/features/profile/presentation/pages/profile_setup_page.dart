@@ -339,9 +339,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       builder: (context, profileState) {
                         final effectiveProfileState =
                             profileState is ProfileFailure &&
-                                    formState.submission == null
-                                ? const ProfileInitial()
-                                : profileState;
+                                formState.submission == null
+                            ? const ProfileInitial()
+                            : profileState;
                         return ProfileSetupSubmitButton(
                           profileState: effectiveProfileState,
                           isFormValid: isFormValid,

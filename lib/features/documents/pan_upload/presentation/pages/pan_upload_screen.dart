@@ -43,11 +43,15 @@ class _PanUploadViewState extends State<_PanUploadView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
-      appBar: AppAppBar(title: 'PAN Upload', onBack: () => Navigator.pop(context)),
+      appBar: AppAppBar(
+        title: 'PAN Upload',
+        onBack: () => Navigator.pop(context),
+      ),
       body: SafeArea(
         child: BlocConsumer<PanUploadCubit, PanUploadState>(
           listener: (context, state) {
-            if (state.errorMessage != null && state.errorMessage!.trim().isNotEmpty) {
+            if (state.errorMessage != null &&
+                state.errorMessage!.trim().isNotEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.errorMessage!.trim())),
               );
@@ -100,7 +104,9 @@ class _PanUploadViewState extends State<_PanUploadView> {
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    side: BorderSide(color: AppColors.gray.shade200),
+                                    side: BorderSide(
+                                      color: AppColors.gray.shade200,
+                                    ),
                                   ),
                                 ),
                                 onPressed: () => _showSourceSheet(context),
@@ -118,7 +124,9 @@ class _PanUploadViewState extends State<_PanUploadView> {
                               const SizedBox(width: 10),
                               IconButton(
                                 tooltip: 'Remove',
-                                onPressed: state.isSubmitting ? null : cubit.removeFile,
+                                onPressed: state.isSubmitting
+                                    ? null
+                                    : cubit.removeFile,
                                 icon: const Icon(Icons.close_rounded),
                               ),
                             ],
@@ -141,7 +149,9 @@ class _PanUploadViewState extends State<_PanUploadView> {
                                 style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                               const Spacer(),
-                              _StatusBadge(status: state.response!.verificationStatus),
+                              _StatusBadge(
+                                status: state.response!.verificationStatus,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -152,7 +162,10 @@ class _PanUploadViewState extends State<_PanUploadView> {
                           const SizedBox(height: 6),
                           Text(
                             'Document URL: ${state.response!.documentUrl}',
-                            style: TextStyle(fontSize: 12, color: AppColors.gray.shade600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.gray.shade600,
+                            ),
                           ),
                         ],
                       ),
@@ -178,7 +191,9 @@ class _PanUploadViewState extends State<_PanUploadView> {
                               height: 22,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -191,7 +206,8 @@ class _PanUploadViewState extends State<_PanUploadView> {
                             ),
                     ),
                   ),
-                  if (state.errorMessage != null && state.errorMessage!.trim().isNotEmpty)
+                  if (state.errorMessage != null &&
+                      state.errorMessage!.trim().isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
                       child: Center(
@@ -293,7 +309,11 @@ class _SectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.badge_rounded, size: 18, color: AppColors.headingNavy),
+              const Icon(
+                Icons.badge_rounded,
+                size: 18,
+                color: AppColors.headingNavy,
+              ),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -370,7 +390,11 @@ class _EmptyPreview extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.cloud_upload_rounded, color: AppColors.gray.shade400, size: 34),
+          Icon(
+            Icons.cloud_upload_rounded,
+            color: AppColors.gray.shade400,
+            size: 34,
+          ),
           const SizedBox(height: 8),
           Text(
             'No file selected',
@@ -415,13 +439,8 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         normalized.isEmpty ? 'pending' : normalized,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg),
       ),
     );
   }
 }
-

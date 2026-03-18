@@ -85,7 +85,7 @@ class _VerificationSubmittedScreenState
         widget.snackbarMessage!.trim().isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        SnackBarUtils.showError(context, widget.snackbarMessage!);
+        SnackBarUtils.show(context, widget.snackbarMessage!);
       });
     }
     Future.delayed(const Duration(milliseconds: 200), () {

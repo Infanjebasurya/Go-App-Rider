@@ -95,12 +95,7 @@ class VehicleSelectionCubit extends Cubit<VehicleSelectionState> {
 
       emit(state.copyWith(vehicles: vehicles, isLoading: false));
     } on DioException catch (error) {
-      emit(
-        state.copyWith(
-          isLoading: false,
-          errorMessage: _mapDioError(error),
-        ),
-      );
+      emit(state.copyWith(isLoading: false, errorMessage: _mapDioError(error)));
     } catch (error) {
       emit(
         state.copyWith(
@@ -175,10 +170,9 @@ class VehicleSelectionCubit extends Cubit<VehicleSelectionState> {
         );
         if (parsed.success == true) {
           emit(state.copyWith(isLoading: false));
-          final message =
-              parsed.message?.trim().isNotEmpty == true
-                  ? parsed.message!.trim()
-                  : 'Vehicle type saved.';
+          final message = parsed.message?.trim().isNotEmpty == true
+              ? parsed.message!.trim()
+              : 'Vehicle type saved.';
           return message;
         }
         final message = parsed.message?.trim().isNotEmpty == true

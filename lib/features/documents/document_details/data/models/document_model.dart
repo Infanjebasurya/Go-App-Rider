@@ -37,12 +37,10 @@ class DocumentModel {
           .toString(),
       documentUrl: (json['document_url'] ?? json['documentUrl'] ?? '')
           .toString(),
-      documentNumber:
-          (json['document_number'] ?? json['documentNumber'] ?? '').toString(),
+      documentNumber: (json['document_number'] ?? json['documentNumber'] ?? '')
+          .toString(),
       verificationStatus:
-          (json['verification_status'] ??
-                  json['verificationStatus'] ??
-                  '')
+          (json['verification_status'] ?? json['verificationStatus'] ?? '')
               .toString(),
       uploadedAt: uploadedAt,
       isActive: json['is_active'] == true || json['isActive'] == true,
@@ -51,4 +49,3 @@ class DocumentModel {
     );
   }
 }
-

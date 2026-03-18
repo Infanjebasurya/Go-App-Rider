@@ -72,4 +72,3 @@ class PanUploadState extends Equatable {
     panError,
   ];
 }
-

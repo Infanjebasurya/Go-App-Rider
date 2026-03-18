@@ -56,8 +56,9 @@ class AadhaarUploadState extends Equatable {
       isSubmitting: isSubmitting ?? this.isSubmitting,
       response: clearResponse ? null : (response ?? this.response),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      aadhaarError:
-          clearAadhaarError ? null : (aadhaarError ?? this.aadhaarError),
+      aadhaarError: clearAadhaarError
+          ? null
+          : (aadhaarError ?? this.aadhaarError),
     );
   }
 
@@ -72,4 +73,3 @@ class AadhaarUploadState extends Equatable {
     aadhaarError,
   ];
 }
-

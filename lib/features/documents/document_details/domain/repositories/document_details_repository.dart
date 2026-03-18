@@ -4,4 +4,3 @@ abstract interface class DocumentDetailsRepository {
   Future<DocumentCardModel?> getAadhaarCard();
   Future<DocumentCardModel?> getPanCard();
 }
-

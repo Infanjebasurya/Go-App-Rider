@@ -95,9 +95,7 @@ class LocalProfileRepository implements ProfileRepository {
       final Response<dynamic> response = await _dio.post(
         ApiEndpoints.onboardingProfile,
         data: body,
-        options: Options(
-          headers: headers,
-        ),
+        options: Options(headers: headers),
       );
 
       if (response.data is! Map<String, dynamic>) {
@@ -241,8 +239,9 @@ class LocalProfileRepository implements ProfileRepository {
 
     final String storedDriverId = (DriverIdStore.driverId() ?? '').trim();
     final String localDriverId = (localProfile?.id ?? '').trim();
-    final String driverId =
-        storedDriverId.isNotEmpty ? storedDriverId : localDriverId;
+    final String driverId = storedDriverId.isNotEmpty
+        ? storedDriverId
+        : localDriverId;
 
     if (driverId.isNotEmpty && driverId != 'local-profile') {
       try {
@@ -251,9 +250,12 @@ class LocalProfileRepository implements ProfileRepository {
         if (accessToken.isEmpty) {
           return Right(localProfile);
         }
-        final String tokenType =
-            (AuthTokenStore.tokenType() ?? 'Bearer').trim();
-        final Map<String, dynamic> body = <String, dynamic>{
+        if (Env.mockApi || accessToken.startsWith('mock-')) {
+          return Right(localProfile);
+        }
+        final String tokenType = (AuthTokenStore.tokenType() ?? 'Bearer')
+            .trim();
+        final Map<String, dynamic> query = <String, dynamic>{
           'driverId': driverId,
         };
         if (kDebugMode) {
@@ -261,17 +263,16 @@ class LocalProfileRepository implements ProfileRepository {
             'Onboarding Profile API called -> GET '
             '${_dio.options.baseUrl}${ApiEndpoints.onboardingProfile}',
           );
-          debugPrint('Onboarding Profile API request body -> $body');
+          debugPrint('Onboarding Profile API query -> $query');
         }
 
-         final Response<dynamic> response = await _dio.request(
-           ApiEndpoints.onboardingProfile,
-           data: body,
-           options: Options(
-             method: 'GET',
-             headers: <String, String>{
-               'Authorization': '$tokenType $accessToken',
-             },
+        final Response<dynamic> response = await _dio.get(
+          ApiEndpoints.onboardingProfile,
+          queryParameters: query,
+          options: Options(
+            headers: <String, String>{
+              'Authorization': '$tokenType $accessToken',
+            },
           ),
         );
 

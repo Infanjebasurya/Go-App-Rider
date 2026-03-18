@@ -71,8 +71,8 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
       messenger
         ..clearSnackBars()
         ..showSnackBar(
-        SnackBar(content: Text(error), duration: const Duration(seconds: 2)),
-      );
+          SnackBar(content: Text(error), duration: const Duration(seconds: 2)),
+        );
       return;
     }
 
@@ -99,9 +99,7 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => VehicleDetailsScreen(
-          vehicleType: selectedVehicle.type,
-        ),
+        builder: (_) => VehicleDetailsScreen(vehicleType: selectedVehicle.type),
       ),
     );
   }
@@ -226,10 +224,7 @@ class _VehicleTypesError extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.gray.shade600,
-              ),
+              style: TextStyle(fontSize: 14, color: AppColors.gray.shade600),
             ),
             const SizedBox(height: 12),
             SizedBox(

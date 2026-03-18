@@ -84,7 +84,7 @@ class DocumentStepContent extends StatelessWidget {
         config.step == DocumentStep.vehicleRC ||
         config.step == DocumentStep.identityAadhaar ||
         config.step == DocumentStep.identityPan;
-    final requiresBackSide = config.step != DocumentStep.identityPan;
+    final requiresBackSide = config.requiresBackSide;
     final isAadhaarStep = config.step == DocumentStep.identityAadhaar;
     final isPanStep = config.step == DocumentStep.identityPan;
     final isVehicleStep = config.step == DocumentStep.vehicleRC;
@@ -193,6 +193,17 @@ class DocumentStepContent extends StatelessWidget {
             onChanged: (v) =>
                 context.read<DocumentUploadCubit>().updateDocumentNumber(v),
           ),
+          if (config.requiresExpiryDate) ...[
+            const SizedBox(height: 16),
+            _ExpiryDateField(
+              label: config.expiryLabel,
+              hint: config.expiryHint,
+              value: stepData.expiryDate,
+              errorText: stepData.expiryDateError,
+              onPick: (picked) =>
+                  context.read<DocumentUploadCubit>().updateExpiryDate(picked),
+            ),
+          ],
           const SizedBox(height: 30),
         ],
       ),
@@ -211,6 +222,92 @@ class DocumentStepContent extends StatelessWidget {
       }
     }
     return buffer.toString();
+  }
+}
+
+class _ExpiryDateField extends StatelessWidget {
+  const _ExpiryDateField({
+    required this.label,
+    required this.hint,
+    required this.value,
+    required this.errorText,
+    required this.onPick,
+  });
+
+  final String label;
+  final String hint;
+  final String value;
+  final String? errorText;
+  final ValueChanged<DateTime> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final String display = value.trim().isEmpty ? hint : value.trim();
+    final bool showHint = value.trim().isEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.headingNavy,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () async {
+            final DateTime now = DateTime.now();
+            final DateTime initial = DateTime.tryParse(value) ?? now;
+            final DateTime? picked = await showDatePicker(
+              context: context,
+              initialDate: initial.isBefore(now) ? now : initial,
+              firstDate: DateTime(now.year - 1, 1, 1),
+              lastDate: DateTime(2100, 12, 31),
+            );
+            if (picked == null) return;
+            onPick(picked);
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: errorText != null
+                    ? const Color(0xFFE53935)
+                    : const Color(0xFFE2E8F0),
+              ),
+              color: Colors.white,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    display,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: showHint ? Colors.grey : AppColors.headingNavy,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.calendar_month, size: 18, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            errorText!,
+            style: const TextStyle(fontSize: 11, color: Color(0xFFE53935)),
+          ),
+        ],
+      ],
+    );
   }
 }
 

@@ -32,7 +32,8 @@ class _DocumentStatusView extends StatelessWidget {
       appBar: const AppAppBar(title: 'Verification Status'),
       body: BlocBuilder<DocumentStatusCubit, DocumentStatusState>(
         builder: (context, state) {
-          if (state is DocumentStatusInitial || state is DocumentStatusLoading) {
+          if (state is DocumentStatusInitial ||
+              state is DocumentStatusLoading) {
             return const _LoadingView();
           }
           if (state is DocumentStatusError) {
@@ -40,7 +41,11 @@ class _DocumentStatusView extends StatelessWidget {
           }
           if (state is DocumentStatusLoaded) {
             if (state.isEmpty) return const _EmptyView();
-            return _LoadedView(items: state.summary.items, verified: state.summary.verifiedCount, total: state.summary.totalCount);
+            return _LoadedView(
+              items: state.summary.items,
+              verified: state.summary.verifiedCount,
+              total: state.summary.totalCount,
+            );
           }
           return const SizedBox.shrink();
         },
@@ -68,7 +73,10 @@ class _LoadedView extends StatelessWidget {
       children: [
         _ProgressCard(verified: verified, total: total, progress: progress),
         const SizedBox(height: 14),
-        ...items.map((e) => _StatusRow(item: e)).expand((w) => [w, const SizedBox(height: 10)]).toList()
+        ...items
+            .map((e) => _StatusRow(item: e))
+            .expand((w) => [w, const SizedBox(height: 10)])
+            .toList()
           ..removeLast(),
       ],
     );
@@ -120,7 +128,9 @@ class _ProgressCard extends StatelessWidget {
               minHeight: 10,
               value: progress,
               backgroundColor: AppColors.hexFFEEEEEE,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.emerald),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.emerald,
+              ),
             ),
           ),
         ],
@@ -267,7 +277,11 @@ class _EmptyView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: const [
-          Icon(Icons.folder_off_outlined, size: 48, color: AppColors.hexFF888888),
+          Icon(
+            Icons.folder_off_outlined,
+            size: 48,
+            color: AppColors.hexFF888888,
+          ),
           SizedBox(height: 14),
           Text(
             'No documents found',
@@ -292,7 +306,11 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: AppColors.hexFFEF5350),
+            const Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppColors.hexFFEF5350,
+            ),
             const SizedBox(height: 12),
             Text(
               message,
@@ -317,4 +335,3 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
-

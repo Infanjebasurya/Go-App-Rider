@@ -27,4 +27,3 @@ class AadhaarUploadRepositoryImpl implements AadhaarUploadRepository {
     return _service.uploadAadhaar(file: file, aadhaarNumber: normalized);
   }
 }
-

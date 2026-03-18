@@ -72,11 +72,7 @@ class PanUploadCubit extends Cubit<PanUploadState> {
   Future<void> submit() async {
     final pan = state.panNumber.trim().toUpperCase();
     if (!RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$').hasMatch(pan)) {
-      emit(
-        state.copyWith(
-          panError: 'Enter a valid PAN (e.g., ABCDE1234F).',
-        ),
-      );
+      emit(state.copyWith(panError: 'Enter a valid PAN (e.g., ABCDE1234F).'));
       return;
     }
     final path = state.filePath;
@@ -86,10 +82,15 @@ class PanUploadCubit extends Cubit<PanUploadState> {
     }
 
     _log('PAN upload -> submit pan=$pan, file=$path');
-    emit(state.copyWith(isSubmitting: true, clearError: true, clearResponse: true));
+    emit(
+      state.copyWith(isSubmitting: true, clearError: true, clearResponse: true),
+    );
 
     try {
-      final response = await _repository.uploadPan(file: File(path), panNumber: pan);
+      final response = await _repository.uploadPan(
+        file: File(path),
+        panNumber: pan,
+      );
       _log('PAN upload response <- ${response.toJson()}');
       emit(state.copyWith(isSubmitting: false, response: response));
     } catch (e) {
@@ -111,4 +112,3 @@ class PanUploadCubit extends Cubit<PanUploadState> {
     emit(PanUploadState.initial());
   }
 }
-

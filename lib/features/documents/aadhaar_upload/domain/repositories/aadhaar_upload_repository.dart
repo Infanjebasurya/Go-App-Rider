@@ -8,4 +8,3 @@ abstract interface class AadhaarUploadRepository {
     required String aadhaarNumber,
   });
 }
-

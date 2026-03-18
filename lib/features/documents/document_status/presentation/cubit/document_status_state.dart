@@ -35,4 +35,3 @@ class DocumentStatusError extends DocumentStatusState {
   @override
   List<Object?> get props => <Object?>[message];
 }
-

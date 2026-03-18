@@ -2,12 +2,17 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:goapp/core/config/api_config.dart';
+import 'package:goapp/core/di/injection.dart';
 import 'package:goapp/core/theme/app_colors.dart';
 import 'package:goapp/features/document_verify/presentation/model/document_model.dart'
     show DocumentType;
 import 'package:goapp/features/document_verify/presentation/model/document_progress_store.dart';
+import 'package:goapp/features/documents/data/datasources/document_details_remote_data_source.dart';
+import 'package:goapp/features/documents/data/models/document_details_models.dart';
 import 'package:goapp/features/documents/presentation/model/document_model.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
+import 'package:goapp/features/documents/presentation/pages/document_upload_screen.dart';
 import 'package:goapp/features/documents/presentation/pages/vehicle_rc_upload_screen.dart';
 
 class DocumentDetailScreen extends StatefulWidget {
@@ -20,6 +25,165 @@ class DocumentDetailScreen extends StatefulWidget {
 }
 
 class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
+  late final DocumentDetailsRemoteDataSource _detailsApi;
+
+  bool _isLoading = false;
+  String? _errorMessage;
+  DrivingLicenseDetailsModel? _dlDetails;
+  VehicleRcDetailsModel? _rcDetails;
+  bool _isEmpty = false;
+
+  bool get _isDrivingLicense => widget.document.iconAsset == 'driving_license';
+  bool get _isVehicleRc => widget.document.iconAsset == 'vehicle_rc';
+
+  @override
+  void initState() {
+    super.initState();
+    _detailsApi = sl<DocumentDetailsRemoteDataSource>();
+    if (_isDrivingLicense || _isVehicleRc) {
+      _fetch();
+    }
+  }
+
+  Future<void> _fetch() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _isEmpty = false;
+    });
+
+    try {
+      if (_isDrivingLicense) {
+        final DrivingLicenseDetailsModel? data = await _detailsApi
+            .getDrivingLicense();
+        if (!mounted) return;
+        if (data == null) {
+          setState(() {
+            _dlDetails = null;
+            _isEmpty = true;
+            _isLoading = false;
+          });
+          return;
+        }
+        _persistDlToStore(data);
+        setState(() {
+          _dlDetails = data;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (_isVehicleRc) {
+        final VehicleRcDetailsModel? data = await _detailsApi.getVehicleRc();
+        if (!mounted) return;
+        if (data == null) {
+          setState(() {
+            _rcDetails = null;
+            _isEmpty = true;
+            _isLoading = false;
+          });
+          return;
+        }
+        _persistRcToStore(data);
+        setState(() {
+          _rcDetails = data;
+          _isLoading = false;
+        });
+        return;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', '').trim();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _persistDlToStore(DrivingLicenseDetailsModel data) {
+    final String? id = data.id?.trim();
+    if (id != null && id.isNotEmpty) {
+      DocumentProgressStore.setDocumentId(DocumentType.drivingLicense, id);
+    }
+    final String? number = data.documentNumber?.trim();
+    if (number != null && number.isNotEmpty) {
+      DocumentProgressStore.setDocumentNumber(
+        DocumentType.drivingLicense,
+        number,
+      );
+    }
+    final String expiry = (data.expiryDateIso ?? '').trim();
+    final DateTime? parsed = DateTime.tryParse(expiry);
+    if (parsed != null) {
+      DocumentProgressStore.setExpiryDate(
+        DocumentType.drivingLicense,
+        _formatYmd(parsed.toLocal()),
+      );
+    }
+    DocumentProgressStore.setCompleted(DocumentType.drivingLicense, true);
+  }
+
+  void _persistRcToStore(VehicleRcDetailsModel data) {
+    final String? id = data.id?.trim();
+    if (id != null && id.isNotEmpty) {
+      DocumentProgressStore.setDocumentId(DocumentType.vehicleRC, id);
+    }
+    final String? number = data.rcNumber?.trim();
+    if (number != null && number.isNotEmpty) {
+      DocumentProgressStore.setDocumentNumber(DocumentType.vehicleRC, number);
+    }
+    DocumentProgressStore.setCompleted(DocumentType.vehicleRC, true);
+  }
+
+  static String _formatYmd(DateTime date) {
+    final String y = date.year.toString().padLeft(4, '0');
+    final String m = date.month.toString().padLeft(2, '0');
+    final String d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  String _formatReadableDate(DateTime date) {
+    const months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final String dd = date.day.toString().padLeft(2, '0');
+    final String mon = months[(date.month - 1).clamp(0, 11)];
+    return '$dd $mon ${date.year}';
+  }
+
+  String _statusLabel(String? raw) {
+    final String v = (raw ?? '').trim().toLowerCase();
+    switch (v) {
+      case 'approved':
+      case 'verified':
+        return 'Verified';
+      case 'rejected':
+        return 'Rejected';
+      case 'pending':
+      default:
+        return 'Under Review';
+    }
+  }
+
+  String _resolveDocumentUrl(String rawUrl) {
+    final String trimmed = rawUrl.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return ApiConfig.resolve(trimmed).toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isVehicleRc = widget.document.iconAsset == 'vehicle_rc';
@@ -31,11 +195,13 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: _buildContent(context),
+              child: _buildBody(context),
             ),
           ),
-          if (isVehicleRc) const _VehicleRcBottomPrompt(),
-          if (isVehicleRc) _VehicleRcEditButton(onPressed: _editVehicleRc),
+          if (isVehicleRc && !_isLoading && !_isEmpty && _errorMessage == null)
+            const _VehicleRcBottomPrompt(),
+          if (isVehicleRc && !_isLoading && !_isEmpty && _errorMessage == null)
+            _VehicleRcEditButton(onPressed: _editVehicleRc),
           if (!isVehicleRc) _EncryptionFooter(),
         ],
       ),
@@ -55,18 +221,68 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     );
   }
 
+  Widget _buildBody(BuildContext context) {
+    if (_isDrivingLicense || _isVehicleRc) {
+      if (_isLoading) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.only(top: 40),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      if (_errorMessage != null && _errorMessage!.trim().isNotEmpty) {
+        return _ErrorState(message: _errorMessage!, onRetry: _fetch);
+      }
+      if (_isEmpty) {
+        return _EmptyState(
+          title: _isDrivingLicense
+              ? 'No Driving License Uploaded'
+              : 'No Vehicle RC Uploaded',
+          buttonLabel: _isDrivingLicense
+              ? 'Upload Driving License'
+              : 'Upload RC',
+          onUpload: _isDrivingLicense ? _uploadDrivingLicense : _editVehicleRc,
+        );
+      }
+    }
+    return _buildContent(context);
+  }
+
   Widget _buildContent(BuildContext context) {
     final frontImagePath = _resolvedFrontImagePath();
     final backImagePath = _resolvedBackImagePath();
     final documentNumber = _resolvedDocumentNumber();
     switch (widget.document.iconAsset) {
       case 'driving_license':
+        final String? url = _dlDetails?.documentUrl;
+        final String? number = _dlDetails?.documentNumber;
+        final String? status = _dlDetails?.verificationStatus;
+        final String? expiry = _dlDetails?.expiryDateIso;
+        final DateTime? expiryParsed = expiry == null
+            ? null
+            : DateTime.tryParse(expiry);
         return _DrivingLicenseDetail(
-          frontImagePath: frontImagePath,
+          frontImagePath: (url != null && url.trim().isNotEmpty)
+              ? _resolveDocumentUrl(url)
+              : frontImagePath,
           backImagePath: backImagePath,
-          licenseNumber: documentNumber,
+          licenseNumber: (number != null && number.trim().isNotEmpty)
+              ? number
+              : documentNumber,
+          statusText: _statusLabel(status),
+          expiryText: expiryParsed == null
+              ? null
+              : _formatReadableDate(expiryParsed.toLocal()),
         );
       case 'vehicle_rc':
+        final String? url = _rcDetails?.documentUrl;
+        final String? number = _rcDetails?.rcNumber;
+        final String? status = _rcDetails?.verificationStatus;
+        final String? uploadedAt = _rcDetails?.uploadedAtIso;
+        final DateTime? uploadedParsed = uploadedAt == null
+            ? null
+            : DateTime.tryParse(uploadedAt);
         final oldFront = DocumentProgressStore.previousFrontImagePath(
           DocumentType.vehicleRC,
         );
@@ -84,10 +300,18 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _VehicleRCDetail(
-              frontImagePath: frontImagePath,
+              frontImagePath: (url != null && url.trim().isNotEmpty)
+                  ? _resolveDocumentUrl(url)
+                  : frontImagePath,
               backImagePath: backImagePath,
-              vehicleNumber: documentNumber,
+              vehicleNumber: (number != null && number.trim().isNotEmpty)
+                  ? number
+                  : documentNumber,
               headerText: 'NEW RC',
+              statusText: _statusLabel(status),
+              uploadedAtText: uploadedParsed == null
+                  ? null
+                  : _formatReadableDate(uploadedParsed.toLocal()),
             ),
             if (hasOld) ...[
               const SizedBox(height: 22),
@@ -249,45 +473,70 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     }
     setState(() {});
   }
+
+  Future<void> _uploadDrivingLicense() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const DocumentUploadScreen(initialStepIndex: 1),
+      ),
+    );
+    if (!mounted) return;
+    await _fetch();
+  }
 }
 
 class _DrivingLicenseDetail extends StatelessWidget {
   final String? frontImagePath;
   final String? backImagePath;
   final String? licenseNumber;
+  final String? expiryText;
+  final String statusText;
 
   const _DrivingLicenseDetail({
     this.frontImagePath,
     this.backImagePath,
     this.licenseNumber,
+    this.expiryText,
+    this.statusText = 'Under Review',
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool hasBack =
+        backImagePath != null && backImagePath!.trim().isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SubHeader(text: 'Government of India • Digital Copy'),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _CardImageBox(
-                label: 'FRONT VIEW',
-                color: AppColors.hexFF8A9BAE,
-                imagePath: frontImagePath,
+        if (hasBack)
+          Row(
+            children: [
+              Expanded(
+                child: _CardImageBox(
+                  label: 'FRONT VIEW',
+                  color: AppColors.hexFF8A9BAE,
+                  imagePath: frontImagePath,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _CardImageBox(
-                label: 'BACK VIEW',
-                color: AppColors.hexFF2C3A4A,
-                imagePath: backImagePath,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _CardImageBox(
+                  label: 'BACK VIEW',
+                  color: AppColors.hexFF2C3A4A,
+                  imagePath: backImagePath,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          )
+        else
+          _CardImageBox(
+            label: 'DRIVING LICENSE',
+            color: AppColors.hexFF8A9BAE,
+            fullWidth: true,
+            preserveOriginalAspect: true,
+            imagePath: frontImagePath,
+          ),
         const SizedBox(height: 20),
         _InfoCard(
           children: [
@@ -296,6 +545,12 @@ class _DrivingLicenseDetail extends StatelessWidget {
               value: licenseNumber?.isNotEmpty == true ? licenseNumber! : '—',
               valueLarge: true,
             ),
+            const SizedBox(height: 14),
+            _InfoRow(label: 'STATUS', value: statusText),
+            if (expiryText != null && expiryText!.trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _InfoRow(label: 'EXPIRY DATE', value: expiryText!),
+            ],
           ],
         ),
       ],
@@ -308,40 +563,55 @@ class _VehicleRCDetail extends StatelessWidget {
   final String? frontImagePath;
   final String? backImagePath;
   final String? vehicleNumber;
+  final String? uploadedAtText;
+  final String? statusText;
 
   const _VehicleRCDetail({
     this.headerText = 'Registration Document',
     this.frontImagePath,
     this.backImagePath,
     this.vehicleNumber,
+    this.uploadedAtText,
+    this.statusText,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool hasBack =
+        backImagePath != null && backImagePath!.trim().isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SubHeader(text: headerText),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _CardImageBox(
-                label: 'FRONT VIEW',
-                color: AppColors.hexFF8A9BAE,
-                imagePath: frontImagePath,
+        if (hasBack)
+          Row(
+            children: [
+              Expanded(
+                child: _CardImageBox(
+                  label: 'FRONT VIEW',
+                  color: AppColors.hexFF8A9BAE,
+                  imagePath: frontImagePath,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _CardImageBox(
-                label: 'BACK VIEW',
-                color: AppColors.hexFF2C3A4A,
-                imagePath: backImagePath,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _CardImageBox(
+                  label: 'BACK VIEW',
+                  color: AppColors.hexFF2C3A4A,
+                  imagePath: backImagePath,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          )
+        else
+          _CardImageBox(
+            label: 'VEHICLE RC',
+            color: AppColors.hexFF8A9BAE,
+            fullWidth: true,
+            preserveOriginalAspect: true,
+            imagePath: frontImagePath,
+          ),
         const SizedBox(height: 20),
         _InfoCard(
           children: [
@@ -350,9 +620,131 @@ class _VehicleRCDetail extends StatelessWidget {
               value: vehicleNumber?.isNotEmpty == true ? vehicleNumber! : '—',
               valueLarge: true,
             ),
+            if (statusText != null && statusText!.trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _InfoRow(label: 'STATUS', value: statusText!),
+            ],
+            if (uploadedAtText != null &&
+                uploadedAtText!.trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _InfoRow(label: 'UPLOADED', value: uploadedAtText!),
+            ],
           ],
         ),
       ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.title,
+    required this.buttonLabel,
+    required this.onUpload,
+  });
+
+  final String title;
+  final String buttonLabel;
+  final VoidCallback onUpload;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 60),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.insert_drive_file_outlined,
+              size: 46,
+              color: AppColors.neutralAAA,
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.headingDark,
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 46,
+              child: ElevatedButton(
+                onPressed: onUpload,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald,
+                  foregroundColor: AppColors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: Text(
+                  buttonLabel,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 60),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 46, color: Color(0xFFE53935)),
+            const SizedBox(height: 14),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.neutral888,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald,
+                  foregroundColor: AppColors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -730,6 +1122,7 @@ class _ImageBox extends StatelessWidget {
     final width = fullWidth ? double.infinity : null;
     final height = fullWidth ? 160.0 : 90.0;
     final isDocument = _isDocumentPath(imagePath);
+    final isNetwork = _isNetworkUrl(imagePath);
     if (imagePath == null || imagePath!.isEmpty) {
       return Container(
         width: width,
@@ -777,6 +1170,38 @@ class _ImageBox extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      );
+    }
+
+    if (isNetwork) {
+      if (preserveOriginalAspect) {
+        return AspectRatio(
+          aspectRatio: 1.58,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              color: color.withValues(alpha: 0.16),
+              child: Image.network(
+                imagePath!,
+                width: width,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                errorBuilder: (_, _, _) => _imageFallback(width, height),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          imagePath!,
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _imageFallback(width, height),
         ),
       );
     }
@@ -857,6 +1282,12 @@ class _ImageBox extends StatelessWidget {
     return lower.endsWith('.pdf') ||
         lower.endsWith('.doc') ||
         lower.endsWith('.docx');
+  }
+
+  bool _isNetworkUrl(String? path) {
+    if (path == null || path.isEmpty) return false;
+    final lower = path.toLowerCase();
+    return lower.startsWith('http://') || lower.startsWith('https://');
   }
 
   String _basename(String? path) {

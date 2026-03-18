@@ -21,11 +21,12 @@ class DocumentStatusCubit extends Cubit<DocumentStatusState> {
       final summary = await _repository.getSummary();
       emit(DocumentStatusLoaded(summary));
     } catch (e) {
-      final msg =
-          e.toString().replaceFirst('Exception: ', '').replaceFirst('FormatException: ', '');
+      final msg = e
+          .toString()
+          .replaceFirst('Exception: ', '')
+          .replaceFirst('FormatException: ', '');
       _log('Document status error <- $msg');
       emit(DocumentStatusError(msg.isEmpty ? 'Failed to load status.' : msg));
     }
   }
 }
-

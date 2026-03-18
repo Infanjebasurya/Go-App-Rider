@@ -16,19 +16,17 @@ abstract interface class AadhaarUploadService {
 }
 
 class AadhaarUploadServiceImpl implements AadhaarUploadService {
-  AadhaarUploadServiceImpl({
-    required DataMode mode,
-    Dio? dio,
-  }) : _mode = mode,
-       _dio =
-           dio ??
-           Dio(
-             BaseOptions(
-               baseUrl: ApiConfig.baseUrl,
-               connectTimeout: const Duration(seconds: 30),
-               receiveTimeout: const Duration(seconds: 30),
-             ),
-           );
+  AadhaarUploadServiceImpl({required DataMode mode, Dio? dio})
+    : _mode = mode,
+      _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: ApiConfig.baseUrl,
+              connectTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 30),
+            ),
+          );
 
   static const String _endpointPath = '/api/v1/documents/aadhaar';
 
@@ -109,7 +107,8 @@ class AadhaarUploadServiceImpl implements AadhaarUploadService {
       throw Exception('Invalid server response.');
     }
 
-    return DocumentUploadResponse.fromJson(response.data as Map<String, dynamic>);
+    return DocumentUploadResponse.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 }
-

@@ -15,4 +15,3 @@ class DocumentStatusSummary {
 abstract interface class DocumentStatusRepository {
   Future<DocumentStatusSummary> getSummary();
 }
-

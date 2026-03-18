@@ -52,7 +52,8 @@ class _ProfileView extends StatelessWidget {
       ),
       body: BlocConsumer<ProfileEditCubit, ProfileEditState>(
         listenWhen: (previous, current) {
-          final isLogoutFlow = current.status == ProfileEditStatus.loggedOut ||
+          final isLogoutFlow =
+              current.status == ProfileEditStatus.loggedOut ||
               current.status == ProfileEditStatus.deleted;
           final didChangeMessage =
               previous.errorMessage != current.errorMessage &&
@@ -62,9 +63,9 @@ class _ProfileView extends StatelessWidget {
         listener: (BuildContext context, ProfileEditState state) {
           final message = state.errorMessage;
           if (message != null && message.trim().isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message.trim())),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message.trim())));
           }
           if (state.status == ProfileEditStatus.loggedOut ||
               state.status == ProfileEditStatus.deleted) {

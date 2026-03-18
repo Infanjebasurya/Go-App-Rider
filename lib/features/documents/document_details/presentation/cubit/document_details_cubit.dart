@@ -22,15 +22,12 @@ class DocumentDetailsCubit extends Cubit<DocumentDetailsState> {
         _repository.getAadhaarCard(),
         _repository.getPanCard(),
       ]);
-      emit(
-        DocumentDetailsLoaded(
-          aadhaar: results[0],
-          pan: results[1],
-        ),
-      );
+      emit(DocumentDetailsLoaded(aadhaar: results[0], pan: results[1]));
     } catch (e) {
-      final msg =
-          e.toString().replaceFirst('Exception: ', '').replaceFirst('FormatException: ', '');
+      final msg = e
+          .toString()
+          .replaceFirst('Exception: ', '')
+          .replaceFirst('FormatException: ', '');
       _log('Document details error <- $msg');
       emit(
         DocumentDetailsError(
@@ -40,4 +37,3 @@ class DocumentDetailsCubit extends Cubit<DocumentDetailsState> {
     }
   }
 }
-

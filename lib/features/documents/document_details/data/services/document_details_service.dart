@@ -112,4 +112,3 @@ class DocumentDetailsServiceImpl implements DocumentDetailsService {
     return DocumentModel.fromJson(response.data as Map<String, dynamic>);
   }
 }
-

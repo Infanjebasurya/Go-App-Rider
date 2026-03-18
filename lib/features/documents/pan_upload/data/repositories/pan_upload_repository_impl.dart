@@ -5,7 +5,8 @@ import 'package:goapp/features/documents/pan_upload/data/services/pan_upload_ser
 import 'package:goapp/features/documents/pan_upload/domain/repositories/pan_upload_repository.dart';
 
 class PanUploadRepositoryImpl implements PanUploadRepository {
-  PanUploadRepositoryImpl({required PanUploadService service}) : _service = service;
+  PanUploadRepositoryImpl({required PanUploadService service})
+    : _service = service;
 
   final PanUploadService _service;
 
@@ -26,4 +27,3 @@ class PanUploadRepositoryImpl implements PanUploadRepository {
     return _service.uploadPan(file: file, panNumber: normalized);
   }
 }
-

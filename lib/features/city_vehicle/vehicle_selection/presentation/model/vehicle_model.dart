@@ -72,10 +72,8 @@ class VehicleSelectionState extends Equatable {
     this.errorMessage,
   });
 
-  factory VehicleSelectionState.initial() => const VehicleSelectionState(
-    vehicles: <Vehicle>[],
-    selectedVehicle: null,
-  );
+  factory VehicleSelectionState.initial() =>
+      const VehicleSelectionState(vehicles: <Vehicle>[], selectedVehicle: null);
 
   bool get hasSelection => selectedVehicle != null;
 
@@ -108,4 +106,3 @@ class VehicleSelectionState extends Equatable {
     errorMessage,
   ];
 }
-

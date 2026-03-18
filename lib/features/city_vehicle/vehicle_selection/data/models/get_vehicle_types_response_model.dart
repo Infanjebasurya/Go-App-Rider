@@ -25,7 +25,8 @@ class VehicleTypeItemModel {
               .toString(),
       name: (json['name'] ?? json['label'] ?? '').toString(),
       city: (json['city'] ?? '').toString(),
-      isActive: activeRaw == true ||
+      isActive:
+          activeRaw == true ||
           (activeRaw is String && activeRaw.toLowerCase() == 'true') ||
           (activeRaw is num && activeRaw != 0),
     );

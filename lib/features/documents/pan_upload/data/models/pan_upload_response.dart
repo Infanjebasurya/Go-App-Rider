@@ -22,9 +22,10 @@ class PanUploadResponse {
       success: json['success'] == true,
       id: (json['id'] ?? '').toString(),
       driverId: (json['driverId'] ?? json['driver_id'] ?? '').toString(),
-      documentType:
-          (json['documentType'] ?? json['document_type'] ?? '').toString(),
-      documentUrl: (json['documentUrl'] ?? json['document_url'] ?? '').toString(),
+      documentType: (json['documentType'] ?? json['document_type'] ?? '')
+          .toString(),
+      documentUrl: (json['documentUrl'] ?? json['document_url'] ?? '')
+          .toString(),
       verificationStatus:
           (json['verificationStatus'] ?? json['verification_status'] ?? '')
               .toString(),
@@ -44,4 +45,3 @@ class PanUploadResponse {
     };
   }
 }
-

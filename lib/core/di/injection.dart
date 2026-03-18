@@ -443,7 +443,9 @@ void _registerDocuments() {
       ),
     )
     ..registerLazySingleton<doc_details.DocumentDetailsService>(
-      () => doc_details.DocumentDetailsServiceImpl(mode: doc_details.DataMode.mock),
+      () => doc_details.DocumentDetailsServiceImpl(
+        mode: doc_details.DataMode.mock,
+      ),
     )
     ..registerLazySingleton<DocumentDetailsRepository>(
       () => DocumentDetailsRepositoryImpl(
@@ -454,9 +456,8 @@ void _registerDocuments() {
       () => DocumentDetailsCubit(repository: sl<DocumentDetailsRepository>()),
     )
     ..registerLazySingleton<doc_status.DocumentStatusService>(
-      () => doc_status.DocumentStatusServiceImpl(
-        mode: doc_status.DataMode.mock,
-      ),
+      () =>
+          doc_status.DocumentStatusServiceImpl(mode: doc_status.DataMode.mock),
     )
     ..registerLazySingleton<DocumentStatusRepository>(
       () => DocumentStatusRepositoryImpl(
@@ -470,9 +471,7 @@ void _registerDocuments() {
       () => pan_upload.PanUploadServiceImpl(mode: pan_upload.DataMode.mock),
     )
     ..registerLazySingleton<PanUploadRepository>(
-      () => PanUploadRepositoryImpl(
-        service: sl<pan_upload.PanUploadService>(),
-      ),
+      () => PanUploadRepositoryImpl(service: sl<pan_upload.PanUploadService>()),
     )
     ..registerFactory<PanUploadCubit>(
       () => PanUploadCubit(
@@ -482,13 +481,18 @@ void _registerDocuments() {
       ),
     )
     ..registerFactory<DocumentsCubit>(() => DocumentsCubit())
-    ..registerFactory<VerificationCubit>(() => VerificationCubit())
+    ..registerFactory<VerificationCubit>(
+      () => VerificationCubit(submitAllDataSource: sl()),
+    )
     ..registerFactoryParam<DocumentUploadCubit, int, void>(
       (initialStepIndex, _) => DocumentUploadCubit(
         initialStepIndex: initialStepIndex,
         imagePickerService: sl(),
         filePickerService: sl(),
         fileService: sl(),
+        drivingLicenseUploadRemoteDataSource: sl(),
+        profileImageUploadRemoteDataSource: sl(),
+        vehicleRcUploadRemoteDataSource: sl(),
       ),
     );
 }

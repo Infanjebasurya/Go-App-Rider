@@ -24,4 +24,3 @@ class DocumentCardModel extends Equatable {
     uploadedDate,
   ];
 }
-

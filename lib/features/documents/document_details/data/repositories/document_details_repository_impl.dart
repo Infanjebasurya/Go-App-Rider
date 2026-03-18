@@ -52,8 +52,10 @@ class DocumentDetailsRepositoryImpl implements DocumentDetailsRepository {
   }
 
   String _maskAadhaar(DocumentModel doc) {
-    final String digits =
-        (doc.documentNumber).replaceAll(RegExp(r'[^0-9]'), '');
+    final String digits = (doc.documentNumber).replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
     String last4 = (doc.aadhaarLast4 ?? '').trim();
     if (last4.isEmpty && digits.length >= 4) {
       last4 = digits.substring(digits.length - 4);
@@ -63,7 +65,9 @@ class DocumentDetailsRepositoryImpl implements DocumentDetailsRepository {
   }
 
   String _maskPan(DocumentModel doc) {
-    final String pan = (doc.panNumber ?? doc.documentNumber).trim().toUpperCase();
+    final String pan = (doc.panNumber ?? doc.documentNumber)
+        .trim()
+        .toUpperCase();
     if (pan.length != 10) return '**********';
     final String first5 = pan.substring(0, 5);
     final String last1 = pan.substring(9);
@@ -100,4 +104,3 @@ class DocumentDetailsRepositoryImpl implements DocumentDetailsRepository {
 }
 
 enum _DocType { aadhaar, pan }
-

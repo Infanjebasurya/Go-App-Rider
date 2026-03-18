@@ -16,19 +16,17 @@ abstract interface class PanUploadService {
 }
 
 class PanUploadServiceImpl implements PanUploadService {
-  PanUploadServiceImpl({
-    required DataMode mode,
-    Dio? dio,
-  }) : _mode = mode,
-       _dio =
-           dio ??
-           Dio(
-             BaseOptions(
-               baseUrl: ApiConfig.baseUrl,
-               connectTimeout: const Duration(seconds: 30),
-               receiveTimeout: const Duration(seconds: 30),
-             ),
-           );
+  PanUploadServiceImpl({required DataMode mode, Dio? dio})
+    : _mode = mode,
+      _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: ApiConfig.baseUrl,
+              connectTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 30),
+            ),
+          );
 
   final DataMode _mode;
   final Dio _dio;
@@ -90,8 +88,9 @@ class PanUploadServiceImpl implements PanUploadService {
       'pan_number': panNumber,
       'file': await MultipartFile.fromFile(
         file.path,
-        filename:
-            file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : 'pan.png',
+        filename: file.uri.pathSegments.isNotEmpty
+            ? file.uri.pathSegments.last
+            : 'pan.png',
       ),
     });
 

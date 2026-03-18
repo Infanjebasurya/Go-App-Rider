@@ -9,7 +9,9 @@ class OnboardingGetProfileResponseModel {
   final String? message;
   final OnboardingDriverProfileModel? data;
 
-  factory OnboardingGetProfileResponseModel.fromJson(Map<String, dynamic> json) {
+  factory OnboardingGetProfileResponseModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
     final dataRaw = json['data'];
     return OnboardingGetProfileResponseModel(
       success: _parseBool(json['success'] ?? json['status']) ?? false,
@@ -57,4 +59,3 @@ class OnboardingDriverProfileModel {
     );
   }
 }
-

@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/features/auth/presentation/theme/app_colors.dart';
 import 'package:goapp/features/auth/presentation/widgets/appbar.dart';
-import 'package:goapp/features/document_verify/presentation/model/document_model.dart';
-import 'package:goapp/features/document_verify/presentation/model/document_progress_store.dart';
 import 'package:goapp/features/document_verify/presentation/pages/verification_screen.dart';
-import 'package:goapp/features/documents/presentation/pages/verification_submitted_screen.dart';
 import 'package:goapp/core/di/injection.dart';
 
 import '../cubit/document_upload_cubit.dart';
@@ -72,6 +69,18 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
   Widget build(BuildContext context) {
     return BlocConsumer<DocumentUploadCubit, DocumentUploadState>(
       listener: (context, state) {
+        final message = state.statusMessage;
+        if (message != null && message.trim().isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: state.statusIsError
+                  ? const Color(0xFFB91C1C)
+                  : AppColors.emerald,
+            ),
+          );
+          context.read<DocumentUploadCubit>().clearStatusMessage();
+        }
         if (state.isAllDone && !_navigatedToSuccess) {
           _navigatedToSuccess = true;
           _navigateToSuccess(context);
@@ -164,41 +173,9 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
   }
 
   void _navigateToSuccess(BuildContext context) {
-    final missingMessage = _missingDocumentsMessage();
-    if (missingMessage != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const VerificationScreen()),
-      );
-      return;
-    }
     Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, _, _) =>
-            VerificationSubmittedScreen(snackbarMessage: null),
-        transitionsBuilder: (_, anim, _, child) =>
-            FadeTransition(opacity: anim, child: child),
-      ),
+      MaterialPageRoute(builder: (_) => const VerificationScreen()),
     );
-  }
-
-  String? _missingDocumentsMessage() {
-    final hasProfilePhoto = DocumentProgressStore.isProfileImageUploaded();
-    if (!hasProfilePhoto) {
-      return 'Please upload your profile picture before proceeding.';
-    }
-    const requiredDocs = <DocumentType>[
-      DocumentType.drivingLicense,
-      DocumentType.vehicleRC,
-      DocumentType.aadhaarCard,
-      DocumentType.panCard,
-      DocumentType.bankDetails,
-    ];
-    final allComplete = requiredDocs.every(
-      (doc) => DocumentProgressStore.isCompleted(doc),
-    );
-    if (allComplete) return null;
-    return 'Please upload all required documents.';
   }
 
   void _handleBack(BuildContext context) {

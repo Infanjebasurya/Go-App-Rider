@@ -16,4 +16,3 @@ class DocumentStatusItemModel extends Equatable {
   @override
   List<Object?> get props => <Object?>[type, title, status];
 }
-

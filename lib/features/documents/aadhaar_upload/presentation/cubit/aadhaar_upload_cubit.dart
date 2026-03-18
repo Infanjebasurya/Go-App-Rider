@@ -27,7 +27,8 @@ class AadhaarUploadCubit extends Cubit<AadhaarUploadState> {
 
   void updateAadhaarNumber(String value) {
     final normalized = value.trim();
-    final valid = normalized.isEmpty || RegExp(r'^\d{0,12}$').hasMatch(normalized);
+    final valid =
+        normalized.isEmpty || RegExp(r'^\d{0,12}$').hasMatch(normalized);
     emit(
       state.copyWith(
         aadhaarNumber: value,
@@ -74,7 +75,9 @@ class AadhaarUploadCubit extends Cubit<AadhaarUploadState> {
   Future<void> submit() async {
     final aadhaar = state.aadhaarNumber.trim();
     if (!RegExp(r'^\d{12}$').hasMatch(aadhaar)) {
-      emit(state.copyWith(aadhaarError: 'Enter a valid 12-digit Aadhaar number.'));
+      emit(
+        state.copyWith(aadhaarError: 'Enter a valid 12-digit Aadhaar number.'),
+      );
       return;
     }
     final path = state.filePath;
@@ -84,7 +87,9 @@ class AadhaarUploadCubit extends Cubit<AadhaarUploadState> {
     }
 
     _log('Aadhaar upload -> submit aadhaar=$aadhaar, file=$path');
-    emit(state.copyWith(isSubmitting: true, clearError: true, clearResponse: true));
+    emit(
+      state.copyWith(isSubmitting: true, clearError: true, clearResponse: true),
+    );
 
     try {
       final response = await _repository.uploadAadhaar(
@@ -94,9 +99,17 @@ class AadhaarUploadCubit extends Cubit<AadhaarUploadState> {
       _log('Aadhaar upload response <- ${response.toJson()}');
       emit(state.copyWith(isSubmitting: false, response: response));
     } catch (e) {
-      final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('FormatException: ', '');
+      final msg = e
+          .toString()
+          .replaceFirst('Exception: ', '')
+          .replaceFirst('FormatException: ', '');
       _log('Aadhaar upload error <- $msg');
-      emit(state.copyWith(isSubmitting: false, errorMessage: msg.isEmpty ? 'Upload failed.' : msg));
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: msg.isEmpty ? 'Upload failed.' : msg,
+        ),
+      );
     }
   }
 

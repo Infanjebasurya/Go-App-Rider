@@ -8,4 +8,3 @@ abstract interface class PanUploadRepository {
     required String panNumber,
   });
 }
-

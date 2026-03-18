@@ -21,8 +21,8 @@ class SaveSelectedVehicleTypeResponseModel {
       success: _parseBool(json['success'] ?? json['status']),
       selectionId: (json['selection_id'] ?? json['selectionId'] ?? json['id'])
           ?.toString(),
-      vehicleTypeId:
-          (json['vehicle_type_id'] ?? json['vehicleTypeId'])?.toString(),
+      vehicleTypeId: (json['vehicle_type_id'] ?? json['vehicleTypeId'])
+          ?.toString(),
       vehicleTypeCode: (json['vehicle_type'] ?? json['vehicleType'])
           ?.toString(),
     );

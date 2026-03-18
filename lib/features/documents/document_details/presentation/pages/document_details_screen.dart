@@ -30,7 +30,8 @@ class _DocumentDetailsView extends StatelessWidget {
       appBar: const AppAppBar(title: 'Document Details'),
       body: BlocBuilder<DocumentDetailsCubit, DocumentDetailsState>(
         builder: (context, state) {
-          if (state is DocumentDetailsLoading || state is DocumentDetailsInitial) {
+          if (state is DocumentDetailsLoading ||
+              state is DocumentDetailsInitial) {
             return const _LoadingView();
           }
           if (state is DocumentDetailsError) {
@@ -233,11 +234,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         normalized.isEmpty ? 'pending' : normalized,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg),
       ),
     );
   }
@@ -250,11 +247,7 @@ class _LoadingView extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-      children: const [
-        _SkeletonCard(),
-        SizedBox(height: 14),
-        _SkeletonCard(),
-      ],
+      children: const [_SkeletonCard(), SizedBox(height: 14), _SkeletonCard()],
     );
   }
 }
@@ -273,8 +266,10 @@ class _SkeletonCardState extends State<_SkeletonCard>
     duration: const Duration(milliseconds: 1200),
   )..repeat(reverse: true);
 
-  late final Animation<double> _anim = Tween<double>(begin: -1.4, end: 1.4)
-      .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  late final Animation<double> _anim = Tween<double>(
+    begin: -1.4,
+    end: 1.4,
+  ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
 
   @override
   void dispose() {
@@ -316,7 +311,11 @@ class _EmptyView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: const [
-          Icon(Icons.folder_off_outlined, size: 48, color: AppColors.hexFF888888),
+          Icon(
+            Icons.folder_off_outlined,
+            size: 48,
+            color: AppColors.hexFF888888,
+          ),
           SizedBox(height: 14),
           Text(
             'Document not uploaded',
@@ -341,7 +340,11 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: AppColors.hexFFEF5350),
+            const Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppColors.hexFFEF5350,
+            ),
             const SizedBox(height: 12),
             Text(
               message,
@@ -366,4 +369,3 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
-

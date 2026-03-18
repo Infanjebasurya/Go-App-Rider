@@ -79,4 +79,3 @@ class DocumentStatusServiceImpl implements DocumentStatusService {
     return DocumentStatusModel.fromJson(response.data as Map<String, dynamic>);
   }
 }
-
