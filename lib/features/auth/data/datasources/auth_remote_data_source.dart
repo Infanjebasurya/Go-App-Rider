@@ -122,8 +122,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw Exception('Invalid verify OTP response.');
       }
 
-      final Map<String, dynamic> json =
-          response.data as Map<String, dynamic>;
+      final Map<String, dynamic> json = response.data as Map<String, dynamic>;
 
       // Primary parsing via existing model (supports access_token/token).
       final VerifyOtpResponseModel parsed = VerifyOtpResponseModel.fromJson(
@@ -134,10 +133,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final String? sessionToken = json['sessionToken']?.toString();
       final String? refreshToken = json['refreshToken']?.toString();
 
-      final String accessToken =
-          (parsed.accessToken?.isNotEmpty ?? false)
-              ? parsed.accessToken!
-              : (sessionToken ?? '');
+      final String accessToken = (parsed.accessToken?.isNotEmpty ?? false)
+          ? parsed.accessToken!
+          : (sessionToken ?? '');
 
       if (accessToken.isEmpty) {
         throw Exception('Authentication token not found.');
@@ -153,7 +151,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
             : 'Bearer',
       );
 
-      final UserModel user = parsed.user ?? _extractUserFromVerifyJson(json) ??
+      final UserModel user =
+          parsed.user ??
+          _extractUserFromVerifyJson(json) ??
           UserModel(id: 'captain-001', phone: phone.trim());
 
       return AuthResponse(user: user);
@@ -375,7 +375,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           (userRaw['userId'] ?? userRaw['id'] ?? userRaw['user_id'] ?? '')
               .toString();
       final String phone =
-          (userRaw['phoneNumber'] ?? userRaw['phone'] ?? userRaw['mobile'] ?? '')
+          (userRaw['phoneNumber'] ??
+                  userRaw['phone'] ??
+                  userRaw['mobile'] ??
+                  '')
               .toString();
       if (id.isEmpty && phone.isEmpty) return null;
       return UserModel(id: id, phone: phone);

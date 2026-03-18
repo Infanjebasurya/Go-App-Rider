@@ -17,8 +17,15 @@ class DocumentUploadResponseModel {
     return DocumentUploadResponseModel(
       documentId: (json['document_id'] ?? json['documentId'] ?? json['id'])
           ?.toString(),
-      fileUrl: (json['file_url'] ?? json['fileUrl'] ?? json['url'])?.toString(),
-      status: json['status']?.toString(),
+      fileUrl:
+          (json['file_url'] ??
+                  json['fileUrl'] ??
+                  json['url'] ??
+                  json['documentUrl'] ??
+                  json['document_url'])
+              ?.toString(),
+      status: (json['status'] ?? json['verificationStatus'] ?? json['state'])
+          ?.toString(),
       message: json['message']?.toString(),
       success: _parseBool(json['success'] ?? json['status']),
     );

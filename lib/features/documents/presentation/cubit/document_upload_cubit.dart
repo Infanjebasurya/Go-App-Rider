@@ -4,7 +4,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/service/file_picker_service.dart';
 import 'package:goapp/core/service/image_picker_service.dart';
+import 'package:goapp/core/storage/driver_id_store.dart';
 import 'package:goapp/core/storage/text_field_store.dart';
+import 'package:goapp/features/documents/data/datasources/driving_license_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/profile_image_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/vehicle_rc_upload_remote_data_source.dart';
 
 import '../model/document_upload_model.dart';
 import '../services/document_number_rules.dart';
@@ -40,9 +44,18 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     required ImagePickerService imagePickerService,
     required FilePickerService filePickerService,
     required DocumentUploadFileService fileService,
+    required DrivingLicenseUploadRemoteDataSource
+    drivingLicenseUploadRemoteDataSource,
+    required ProfileImageUploadRemoteDataSource
+    profileImageUploadRemoteDataSource,
+    required VehicleRcUploadRemoteDataSource vehicleRcUploadRemoteDataSource,
   }) : _imagePickerService = imagePickerService,
        _filePickerService = filePickerService,
        _fileService = fileService,
+       _drivingLicenseUploadRemoteDataSource =
+           drivingLicenseUploadRemoteDataSource,
+       _profileImageUploadRemoteDataSource = profileImageUploadRemoteDataSource,
+       _vehicleRcUploadRemoteDataSource = vehicleRcUploadRemoteDataSource,
        _isTest = _isFlutterTestEnvironment(),
        super(
          DocumentUploadState.initial().copyWith(
@@ -55,6 +68,10 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
   final ImagePickerService _imagePickerService;
   final FilePickerService _filePickerService;
   final DocumentUploadFileService _fileService;
+  final DrivingLicenseUploadRemoteDataSource
+  _drivingLicenseUploadRemoteDataSource;
+  final ProfileImageUploadRemoteDataSource _profileImageUploadRemoteDataSource;
+  final VehicleRcUploadRemoteDataSource _vehicleRcUploadRemoteDataSource;
   final bool _isTest;
   bool _isPicking = false;
 
@@ -83,6 +100,7 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
       final frontPath = DocumentProgressStore.frontImagePath(docType);
       final backPath = DocumentProgressStore.backImagePath(docType);
       final storedNumber = DocumentProgressStore.documentNumber(docType);
+      final storedExpiry = DocumentProgressStore.expiryDate(docType);
       final frontType = _inferUploadType(frontPath);
       final backType = _inferUploadType(backPath);
       return step.copyWith(
@@ -93,8 +111,10 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
         frontType: frontType,
         backType: backType,
         documentNumber: storedNumber ?? step.documentNumber,
+        expiryDate: storedExpiry ?? step.expiryDate,
         clearError: true,
         clearImageError: true,
+        clearExpiryError: true,
       );
     }).toList();
     final restoredBankData = state.bankData.copyWith(
@@ -185,6 +205,22 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
 
   void updateDocumentNumber(String value) {
     _updateDocumentNumber(this, value);
+  }
+
+  void updateExpiryDate(DateTime value) {
+    if (state.isCurrentStepBank || state.isCurrentStepProfile) return;
+    if (state.currentDocStep.step != DocumentStep.drivingLicense) return;
+    final String ymd = _formatYmd(value);
+    DocumentProgressStore.setExpiryDate(DocumentType.drivingLicense, ymd);
+    final updated = state.currentDocStep.copyWith(
+      expiryDate: ymd,
+      clearExpiryError: true,
+    );
+    _emitState(state.copyWithDocStep(updated));
+  }
+
+  void clearStatusMessage() {
+    _emitState(state.copyWith(clearStatusMessage: true));
   }
 
   void updateAccountHolderName(String value) {
@@ -279,5 +315,132 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
   void reset() {
     if (isClosed) return;
     emit(DocumentUploadState.initial());
+  }
+
+  static String _formatYmd(DateTime date) {
+    final String y = date.year.toString().padLeft(4, '0');
+    final String m = date.month.toString().padLeft(2, '0');
+    final String d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  Future<void> _uploadDrivingLicenseAndContinue() async {
+    final StepData step = state.currentDocStep;
+    final String driverId = (DriverIdStore.driverId() ?? '').trim();
+    final String? filePath = step.frontPath;
+    final String dlNumber = DocumentNumberRules.normalize(
+      DocumentStep.drivingLicense,
+      step.documentNumber,
+    );
+    final String expiryDate = step.expiryDate.trim();
+
+    final response = await _drivingLicenseUploadRemoteDataSource.upload(
+      driverId: driverId,
+      filePath: filePath ?? '',
+      dlNumber: dlNumber,
+      expiryDate: expiryDate,
+    );
+
+    if (response.documentId != null && response.documentId!.trim().isNotEmpty) {
+      DocumentProgressStore.setDocumentId(
+        DocumentType.drivingLicense,
+        response.documentId!.trim(),
+      );
+    }
+    DocumentProgressStore.setCompleted(DocumentType.drivingLicense, true);
+
+    _emitState(
+      state.copyWith(
+        statusMessage:
+            (response.message ?? 'Driving license uploaded successfully.')
+                .trim(),
+        statusIsError: false,
+      ),
+    );
+
+    _emitState(
+      state.copyWith(
+        isSubmitting: false,
+        currentStepIndex: state.currentStepIndex + 1,
+      ),
+    );
+  }
+
+  Future<void> _uploadVehicleRcAndContinue() async {
+    final StepData step = state.currentDocStep;
+    final String? filePath = step.frontPath;
+    final String rcNumber = DocumentNumberRules.normalize(
+      DocumentStep.vehicleRC,
+      step.documentNumber,
+    );
+
+    final response = await _vehicleRcUploadRemoteDataSource.upload(
+      filePath: filePath ?? '',
+      rcNumber: rcNumber,
+    );
+
+    if (response.documentId != null && response.documentId!.trim().isNotEmpty) {
+      DocumentProgressStore.setDocumentId(
+        DocumentType.vehicleRC,
+        response.documentId!.trim(),
+      );
+    }
+    DocumentProgressStore.setCompleted(DocumentType.vehicleRC, true);
+
+    _emitState(
+      state.copyWith(
+        statusMessage: (response.message ?? 'Vehicle RC uploaded successfully.')
+            .trim(),
+        statusIsError: false,
+      ),
+    );
+
+    _emitState(
+      state.copyWith(
+        isSubmitting: false,
+        currentStepIndex: state.currentStepIndex + 1,
+      ),
+    );
+  }
+
+  Future<void> _uploadProfileImageAndContinue() async {
+    final StepData step = state.currentDocStep;
+    final String? filePath = step.frontPath;
+
+    if (_isTest) {
+      _emitState(
+        state.copyWith(
+          statusMessage: 'Profile image uploaded successfully.',
+          statusIsError: false,
+          isSubmitting: false,
+          currentStepIndex: state.currentStepIndex + 1,
+        ),
+      );
+      return;
+    }
+
+    final response = await _profileImageUploadRemoteDataSource.upload(
+      filePath: filePath ?? '',
+    );
+
+    final String requestId = (response.requestId ?? '').trim();
+    if (requestId.isNotEmpty) {
+      await DriverIdStore.saveLastProfileRequestId(requestId);
+    }
+
+    _emitState(
+      state.copyWith(
+        statusMessage:
+            (response.message ?? 'Profile image uploaded successfully.').trim(),
+        statusIsError: false,
+      ),
+    );
+
+    _emitState(
+      state.copyWith(
+        isSubmitting: false,
+        currentStepIndex: state.currentStepIndex + 1,
+      ),
+    );
   }
 }

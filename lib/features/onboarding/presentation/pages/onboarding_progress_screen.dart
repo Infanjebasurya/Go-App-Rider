@@ -1,13 +1,16 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/theme/app_colors.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
 import 'package:goapp/features/document_verify/presentation/pages/verification_screen.dart';
 import 'package:goapp/features/documents/presentation/model/document_upload_model.dart';
 import 'package:goapp/features/documents/presentation/pages/document_upload_screen.dart';
+import 'package:goapp/features/home/presentation/pages/home_page.dart';
 import 'package:goapp/features/onboarding/data/models/onboarding_progress_response_model.dart';
 import 'package:goapp/features/onboarding/presentation/cubit/onboarding_progress_cubit.dart';
 import 'package:goapp/features/onboarding/presentation/cubit/onboarding_progress_state.dart';
+import 'package:goapp/features/onboarding/presentation/cubit/onboarding_submit_cubit.dart';
+import 'package:goapp/features/onboarding/presentation/cubit/onboarding_submit_state.dart';
 import 'package:goapp/features/profile/presentation/pages/profile_setup_page.dart';
 
 class OnboardingProgressScreen extends StatelessWidget {
@@ -15,8 +18,11 @@ class OnboardingProgressScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => OnboardingProgressCubit()..load(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => OnboardingProgressCubit()),
+        BlocProvider(create: (_) => OnboardingSubmitCubit()),
+      ],
       child: const _OnboardingProgressView(),
     );
   }
@@ -26,13 +32,20 @@ class _OnboardingProgressView extends StatefulWidget {
   const _OnboardingProgressView();
 
   @override
-  State<_OnboardingProgressView> createState() => _OnboardingProgressViewState();
+  State<_OnboardingProgressView> createState() =>
+      _OnboardingProgressViewState();
 }
 
 class _OnboardingProgressViewState extends State<_OnboardingProgressView> {
+  bool _didNavigateHome = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<OnboardingProgressCubit>().load();
+    });
   }
 
   @override
@@ -40,26 +53,121 @@ class _OnboardingProgressViewState extends State<_OnboardingProgressView> {
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: const AppAppBar(title: 'Onboarding'),
-      body: BlocBuilder<OnboardingProgressCubit, OnboardingProgressState>(
-        builder: (context, state) {
-          return switch (state) {
-            OnboardingProgressLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
-            OnboardingProgressFailure(:final message) => _ErrorView(
-                message: message,
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<OnboardingSubmitCubit, OnboardingSubmitState>(
+            listenWhen: (prev, next) =>
+                prev.errorMessage != next.errorMessage ||
+                prev.submissionId != next.submissionId,
+            listener: (context, state) {
+              final String error = (state.errorMessage ?? '').trim();
+              if (error.isNotEmpty) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(error)));
+              }
+
+              if (!_didNavigateHome && state.isSuccess) {
+                _didNavigateHome = true;
+                final String message = (state.message ?? '').trim().isNotEmpty
+                    ? state.message!.trim()
+                    : 'Application submitted successfully.';
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(message)));
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
+        child: BlocBuilder<OnboardingProgressCubit, OnboardingProgressState>(
+          builder: (context, state) {
+            if (state is OnboardingProgressLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is OnboardingProgressFailure) {
+              return _ErrorView(
+                message: state.message,
                 onRetry: () => context.read<OnboardingProgressCubit>().load(),
-              ),
-            OnboardingProgressSuccess(:final data) => _ProgressBody(
-                completionPercentage: data.completionPercentage,
-                steps: data.steps,
-                overallStatus: data.overallStatus,
-                onContinue: () => _continueToNext(context, data.steps),
-              ),
-          };
-        },
+              );
+            }
+            if (state is OnboardingProgressSuccess) {
+              final steps = _normalizeSteps(state.data.steps);
+              final bool allDone =
+                  steps.isNotEmpty && steps.every((s) => s.isCompleted);
+
+              return BlocBuilder<OnboardingSubmitCubit, OnboardingSubmitState>(
+                builder: (context, submitState) {
+                  return _ProgressBody(
+                    completionPercentage: state.data.completionPercentage,
+                    steps: steps,
+                    overallStatus: state.data.overallStatus,
+                    declarationAccepted: submitState.declarationAccepted,
+                    isSubmitting: submitState.isSubmitting,
+                    onDeclarationChanged: (value) {
+                      context
+                          .read<OnboardingSubmitCubit>()
+                          .setDeclarationAccepted(value);
+                    },
+                    onContinue: () => _continueToNext(context, steps),
+                    onSubmit: () => context
+                        .read<OnboardingSubmitCubit>()
+                        .submit(allStepsCompleted: allDone),
+                    onStepTap: (step) => _navigateToStep(context, step.id),
+                  );
+                },
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
+  }
+
+  static List<OnboardingProgressStepModel> _normalizeSteps(
+    List<OnboardingProgressStepModel> apiSteps,
+  ) {
+    const List<String> order = <String>['profile', 'documents', 'bank'];
+
+    final Map<String, OnboardingProgressStepModel> byId =
+        <String, OnboardingProgressStepModel>{
+          for (final s in apiSteps) s.id.toLowerCase().trim(): s,
+        };
+
+    String titleFor(String id) {
+      switch (id) {
+        case 'profile':
+          return 'Personal Details';
+        case 'documents':
+          return 'Document Upload';
+        case 'bank':
+          return 'Bank Details';
+      }
+      return id;
+    }
+
+    final List<OnboardingProgressStepModel> normalized =
+        <OnboardingProgressStepModel>[
+          for (final id in order)
+            byId[id] ??
+                OnboardingProgressStepModel(
+                  id: id,
+                  title: titleFor(id),
+                  isCompleted: false,
+                ),
+        ];
+
+    final Iterable<OnboardingProgressStepModel> extras = apiSteps.where((s) {
+      final String key = s.id.toLowerCase().trim();
+      return key.isNotEmpty && !order.contains(key);
+    });
+
+    normalized.addAll(extras);
+    return normalized;
   }
 
   void _continueToNext(
@@ -67,10 +175,23 @@ class _OnboardingProgressViewState extends State<_OnboardingProgressView> {
     List<OnboardingProgressStepModel> steps,
   ) {
     if (steps.isEmpty) return;
-    final currentIndex = steps.indexWhere((s) => !s.isCompleted);
-    final idx = currentIndex == -1 ? (steps.length - 1) : currentIndex;
-    final step = steps[idx];
-    final id = step.id.toLowerCase();
+
+    final bool allDone = steps.every((s) => s.isCompleted);
+    if (allDone) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+      return;
+    }
+
+    final int currentIndex = steps.indexWhere((s) => !s.isCompleted);
+    final int idx = currentIndex == -1 ? 0 : currentIndex;
+    _navigateToStep(context, steps[idx].id);
+  }
+
+  void _navigateToStep(BuildContext context, String stepId) {
+    final String id = stepId.toLowerCase().trim();
 
     Widget target;
     switch (id) {
@@ -81,15 +202,17 @@ class _OnboardingProgressViewState extends State<_OnboardingProgressView> {
         target = const VerificationScreen();
         break;
       case 'bank':
-        final bankIndex = DocumentUploadState.initial().steps.length;
+        final int bankIndex = DocumentUploadState.initial().steps.length;
         target = DocumentUploadScreen(initialStepIndex: bankIndex);
         break;
       default:
-        target = const ProfileSetupPage();
-        break;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Unknown step: $stepId')));
+        return;
     }
 
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => target));
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => target));
   }
 }
 
@@ -98,18 +221,29 @@ class _ProgressBody extends StatelessWidget {
     required this.completionPercentage,
     required this.steps,
     required this.overallStatus,
+    required this.declarationAccepted,
+    required this.isSubmitting,
+    required this.onDeclarationChanged,
     required this.onContinue,
+    required this.onSubmit,
+    required this.onStepTap,
   });
 
   final int completionPercentage;
   final List<OnboardingProgressStepModel> steps;
   final String? overallStatus;
+  final bool declarationAccepted;
+  final bool isSubmitting;
+  final ValueChanged<bool> onDeclarationChanged;
   final VoidCallback onContinue;
+  final VoidCallback onSubmit;
+  final ValueChanged<OnboardingProgressStepModel> onStepTap;
 
   @override
   Widget build(BuildContext context) {
     final currentIndex = steps.indexWhere((s) => !s.isCompleted);
     final activeIndex = currentIndex == -1 ? (steps.length - 1) : currentIndex;
+    final bool allDone = steps.isNotEmpty && steps.every((s) => s.isCompleted);
 
     return SafeArea(
       child: Padding(
@@ -180,15 +314,52 @@ class _ProgressBody extends StatelessWidget {
                     title: step.title,
                     completed: completed,
                     active: active,
+                    onTap: () => onStepTap(step),
                   );
                 },
               ),
             ),
+            if (allDone) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceF5,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Checkbox(
+                      value: declarationAccepted,
+                      onChanged: isSubmitting
+                          ? null
+                          : (value) => onDeclarationChanged(value ?? false),
+                    ),
+                    const Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 10),
+                        child: Text(
+                          'I confirm that the information and documents provided are accurate.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.hexFF2C3A4A,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: onContinue,
+                onPressed: allDone
+                    ? ((declarationAccepted && !isSubmitting) ? onSubmit : null)
+                    : onContinue,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.emerald,
                   foregroundColor: AppColors.white,
@@ -197,10 +368,45 @@ class _ProgressBody extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                ),
+                child: allDone
+                    ? (isSubmitting
+                          ? const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.3,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.white,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Submitting...',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : const Text(
+                              'Submit Application',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ))
+                    : const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -215,11 +421,13 @@ class _StepTile extends StatelessWidget {
     required this.title,
     required this.completed,
     required this.active,
+    required this.onTap,
   });
 
   final String title;
   final bool completed;
   final bool active;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -228,36 +436,50 @@ class _StepTile extends StatelessWidget {
         : (active ? AppColors.hexFF0F4CB9 : AppColors.hexFFD5DDE5);
     final bg = completed
         ? AppColors.emerald.withValues(alpha: 0.06)
-        : (active ? AppColors.hexFF0F4CB9.withValues(alpha: 0.05) : AppColors.white);
+        : (active
+              ? AppColors.hexFF0F4CB9.withValues(alpha: 0.05)
+              : AppColors.white);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: bg,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: border.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          _StepIcon(completed: completed, active: active),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: border.withValues(alpha: 0.5)),
           ),
-          Text(
-            completed ? 'Completed' : (active ? 'Current' : 'Pending'),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: completed
-                  ? AppColors.emerald
-                  : (active ? AppColors.hexFF0F4CB9 : AppColors.hexFF8FA0B0),
-            ),
+          child: Row(
+            children: [
+              _StepIcon(completed: completed, active: active),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                completed ? 'Completed' : (active ? 'Current' : 'Pending'),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: completed
+                      ? AppColors.emerald
+                      : (active
+                            ? AppColors.hexFF0F4CB9
+                            : AppColors.hexFF8FA0B0),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -306,4 +528,3 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
-

@@ -18,11 +18,15 @@ class StepConfig {
   final String numberLabel;
   final String numberHint;
   final String numberExample;
+  final String expiryLabel;
+  final String expiryHint;
   final String allowedPattern;
   final bool forceUppercase;
   final int? maxLength;
   final bool isBankStep;
   final bool isProfileStep;
+  final bool requiresBackSide;
+  final bool requiresExpiryDate;
   final String frontLabel;
   final String backLabel;
 
@@ -35,9 +39,13 @@ class StepConfig {
     required this.allowedPattern,
     this.forceUppercase = false,
     this.numberExample = '',
+    this.expiryLabel = '',
+    this.expiryHint = '',
     this.maxLength,
     this.isBankStep = false,
     this.isProfileStep = false,
+    this.requiresBackSide = true,
+    this.requiresExpiryDate = false,
     this.frontLabel = 'Front Side',
     this.backLabel = 'Back Side',
   });
@@ -60,9 +68,14 @@ const List<StepConfig> kStepConfigs = [
     numberLabel: 'Driving License Number',
     numberHint: 'Mh022354851253',
     numberExample: 'Example: MH1220180012345',
+    expiryLabel: 'Expiry Date',
+    expiryHint: 'YYYY-MM-DD',
     allowedPattern: r'[A-Za-z0-9]',
     forceUppercase: true,
     maxLength: 15,
+    requiresBackSide: false,
+    requiresExpiryDate: true,
+    frontLabel: 'Driving License Image',
   ),
   StepConfig(
     step: DocumentStep.vehicleRC,
@@ -74,6 +87,8 @@ const List<StepConfig> kStepConfigs = [
     allowedPattern: r'[A-Za-z0-9]',
     forceUppercase: true,
     maxLength: 10,
+    requiresBackSide: false,
+    frontLabel: 'Vehicle RC Image',
   ),
   StepConfig(
     step: DocumentStep.identityAadhaar,
@@ -95,6 +110,7 @@ const List<StepConfig> kStepConfigs = [
     allowedPattern: r'[A-Za-z0-9]',
     forceUppercase: true,
     maxLength: 10,
+    requiresBackSide: false,
   ),
   StepConfig(
     step: DocumentStep.bankAccount,
@@ -233,7 +249,9 @@ class StepData extends Equatable {
   final DocumentUploadType? frontType;
   final DocumentUploadType? backType;
   final String documentNumber;
+  final String expiryDate;
   final String? numberError;
+  final String? expiryDateError;
   final String? imageError;
 
   const StepData({
@@ -245,15 +263,38 @@ class StepData extends Equatable {
     this.frontType,
     this.backType,
     this.documentNumber = '',
+    this.expiryDate = '',
     this.numberError,
+    this.expiryDateError,
     this.imageError,
   });
 
   bool get isNumberValid => documentNumber.trim().isNotEmpty;
   bool get isProfileStep => step == DocumentStep.profilePhoto;
-  bool get isComplete => isProfileStep
-      ? frontCaptured
-      : frontCaptured && backCaptured && isNumberValid;
+  bool get requiresBackSide =>
+      step != DocumentStep.identityPan &&
+      step != DocumentStep.drivingLicense &&
+      step != DocumentStep.vehicleRC &&
+      step != DocumentStep.profilePhoto;
+
+  bool get requiresExpiryDate => step == DocumentStep.drivingLicense;
+
+  bool get isComplete {
+    if (isProfileStep) return frontCaptured;
+    if (step == DocumentStep.drivingLicense) {
+      return frontCaptured &&
+          isNumberValid &&
+          expiryDate.trim().isNotEmpty &&
+          expiryDateError == null;
+    }
+    if (step == DocumentStep.vehicleRC) {
+      return frontCaptured && isNumberValid;
+    }
+    if (step == DocumentStep.identityPan) {
+      return frontCaptured && isNumberValid;
+    }
+    return frontCaptured && backCaptured && isNumberValid;
+  }
 
   StepData copyWith({
     bool? frontCaptured,
@@ -263,8 +304,11 @@ class StepData extends Equatable {
     DocumentUploadType? frontType,
     DocumentUploadType? backType,
     String? documentNumber,
+    String? expiryDate,
     String? numberError,
     bool clearError = false,
+    String? expiryDateError,
+    bool clearExpiryError = false,
     String? imageError,
     bool clearImageError = false,
     bool clearFrontUpload = false,
@@ -279,7 +323,11 @@ class StepData extends Equatable {
       frontType: clearFrontUpload ? null : (frontType ?? this.frontType),
       backType: clearBackUpload ? null : (backType ?? this.backType),
       documentNumber: documentNumber ?? this.documentNumber,
+      expiryDate: expiryDate ?? this.expiryDate,
       numberError: clearError ? null : (numberError ?? this.numberError),
+      expiryDateError: clearExpiryError
+          ? null
+          : (expiryDateError ?? this.expiryDateError),
       imageError: clearImageError ? null : (imageError ?? this.imageError),
     );
   }
@@ -294,7 +342,9 @@ class StepData extends Equatable {
     frontType,
     backType,
     documentNumber,
+    expiryDate,
     numberError,
+    expiryDateError,
     imageError,
   ];
 }
@@ -306,6 +356,8 @@ class DocumentUploadState extends Equatable {
   final bool isSubmitting;
   final bool isAllDone;
   final bool isProfileImageProcessing;
+  final String? statusMessage;
+  final bool statusIsError;
 
   const DocumentUploadState({
     this.currentStepIndex = 0,
@@ -314,6 +366,8 @@ class DocumentUploadState extends Equatable {
     this.isSubmitting = false,
     this.isAllDone = false,
     this.isProfileImageProcessing = false,
+    this.statusMessage,
+    this.statusIsError = false,
   });
 
   factory DocumentUploadState.initial() => DocumentUploadState(
@@ -362,6 +416,9 @@ class DocumentUploadState extends Equatable {
     bool? isSubmitting,
     bool? isAllDone,
     bool? isProfileImageProcessing,
+    String? statusMessage,
+    bool clearStatusMessage = false,
+    bool? statusIsError,
   }) {
     return DocumentUploadState(
       currentStepIndex: currentStepIndex ?? this.currentStepIndex,
@@ -371,6 +428,10 @@ class DocumentUploadState extends Equatable {
       isAllDone: isAllDone ?? this.isAllDone,
       isProfileImageProcessing:
           isProfileImageProcessing ?? this.isProfileImageProcessing,
+      statusMessage: clearStatusMessage
+          ? null
+          : (statusMessage ?? this.statusMessage),
+      statusIsError: statusIsError ?? this.statusIsError,
     );
   }
 
@@ -382,5 +443,7 @@ class DocumentUploadState extends Equatable {
     isSubmitting,
     isAllDone,
     isProfileImageProcessing,
+    statusMessage,
+    statusIsError,
   ];
 }

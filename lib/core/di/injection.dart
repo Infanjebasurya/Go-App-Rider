@@ -41,6 +41,25 @@ import 'package:goapp/features/home/presentation/cubit/trip_navigation_cubit.dar
 import 'package:goapp/features/documents/presentation/cubit/documents_cubit.dart';
 import 'package:goapp/features/documents/presentation/cubit/document_upload_cubit.dart';
 import 'package:goapp/features/documents/presentation/services/document_upload_file_service.dart';
+import 'package:goapp/features/documents/aadhaar_upload/data/repositories/aadhaar_upload_repository_impl.dart';
+import 'package:goapp/features/documents/aadhaar_upload/data/services/aadhaar_upload_service.dart';
+import 'package:goapp/features/documents/aadhaar_upload/domain/repositories/aadhaar_upload_repository.dart';
+import 'package:goapp/features/documents/aadhaar_upload/presentation/cubit/aadhaar_upload_cubit.dart';
+import 'package:goapp/features/documents/document_details/data/repositories/document_details_repository_impl.dart';
+import 'package:goapp/features/documents/document_details/data/services/document_details_service.dart'
+    as doc_details;
+import 'package:goapp/features/documents/document_details/domain/repositories/document_details_repository.dart';
+import 'package:goapp/features/documents/document_details/presentation/cubit/document_details_cubit.dart';
+import 'package:goapp/features/documents/document_status/data/repositories/document_status_repository_impl.dart';
+import 'package:goapp/features/documents/document_status/data/services/document_status_service.dart'
+    as doc_status;
+import 'package:goapp/features/documents/document_status/domain/repositories/document_status_repository.dart';
+import 'package:goapp/features/documents/document_status/presentation/cubit/document_status_cubit.dart';
+import 'package:goapp/features/documents/pan_upload/data/repositories/pan_upload_repository_impl.dart';
+import 'package:goapp/features/documents/pan_upload/data/services/pan_upload_service.dart'
+    as pan_upload;
+import 'package:goapp/features/documents/pan_upload/domain/repositories/pan_upload_repository.dart';
+import 'package:goapp/features/documents/pan_upload/presentation/cubit/pan_upload_cubit.dart';
 import 'package:goapp/features/document_verify/presentation/cubit/verification_cubit.dart';
 import 'package:goapp/features/demand_planner/data/datasources/demand_planner_mock_api.dart';
 import 'package:goapp/features/demand_planner/presentation/cubit/demand_planner_cubit.dart';
@@ -410,14 +429,70 @@ void _registerDemandPlanner() {
 
 void _registerDocuments() {
   sl
+    ..registerLazySingleton<AadhaarUploadService>(
+      () => AadhaarUploadServiceImpl(mode: DataMode.mock),
+    )
+    ..registerLazySingleton<AadhaarUploadRepository>(
+      () => AadhaarUploadRepositoryImpl(service: sl<AadhaarUploadService>()),
+    )
+    ..registerFactory<AadhaarUploadCubit>(
+      () => AadhaarUploadCubit(
+        repository: sl<AadhaarUploadRepository>(),
+        imagePickerService: sl<ImagePickerService>(),
+        filePickerService: sl<FilePickerService>(),
+      ),
+    )
+    ..registerLazySingleton<doc_details.DocumentDetailsService>(
+      () => doc_details.DocumentDetailsServiceImpl(
+        mode: doc_details.DataMode.mock,
+      ),
+    )
+    ..registerLazySingleton<DocumentDetailsRepository>(
+      () => DocumentDetailsRepositoryImpl(
+        service: sl<doc_details.DocumentDetailsService>(),
+      ),
+    )
+    ..registerFactory<DocumentDetailsCubit>(
+      () => DocumentDetailsCubit(repository: sl<DocumentDetailsRepository>()),
+    )
+    ..registerLazySingleton<doc_status.DocumentStatusService>(
+      () =>
+          doc_status.DocumentStatusServiceImpl(mode: doc_status.DataMode.mock),
+    )
+    ..registerLazySingleton<DocumentStatusRepository>(
+      () => DocumentStatusRepositoryImpl(
+        service: sl<doc_status.DocumentStatusService>(),
+      ),
+    )
+    ..registerFactory<DocumentStatusCubit>(
+      () => DocumentStatusCubit(repository: sl<DocumentStatusRepository>()),
+    )
+    ..registerLazySingleton<pan_upload.PanUploadService>(
+      () => pan_upload.PanUploadServiceImpl(mode: pan_upload.DataMode.mock),
+    )
+    ..registerLazySingleton<PanUploadRepository>(
+      () => PanUploadRepositoryImpl(service: sl<pan_upload.PanUploadService>()),
+    )
+    ..registerFactory<PanUploadCubit>(
+      () => PanUploadCubit(
+        repository: sl<PanUploadRepository>(),
+        imagePickerService: sl<ImagePickerService>(),
+        filePickerService: sl<FilePickerService>(),
+      ),
+    )
     ..registerFactory<DocumentsCubit>(() => DocumentsCubit())
-    ..registerFactory<VerificationCubit>(() => VerificationCubit())
+    ..registerFactory<VerificationCubit>(
+      () => VerificationCubit(submitAllDataSource: sl()),
+    )
     ..registerFactoryParam<DocumentUploadCubit, int, void>(
       (initialStepIndex, _) => DocumentUploadCubit(
         initialStepIndex: initialStepIndex,
         imagePickerService: sl(),
         filePickerService: sl(),
         fileService: sl(),
+        drivingLicenseUploadRemoteDataSource: sl(),
+        profileImageUploadRemoteDataSource: sl(),
+        vehicleRcUploadRemoteDataSource: sl(),
       ),
     );
 }

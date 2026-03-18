@@ -1,4 +1,4 @@
-﻿class OnboardingProgressStepModel {
+class OnboardingProgressStepModel {
   const OnboardingProgressStepModel({
     required this.id,
     required this.title,
@@ -13,7 +13,8 @@
     return OnboardingProgressStepModel(
       id: (json['id'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
-      isCompleted: _parseBool(json['is_completed'] ?? json['isCompleted']) ?? false,
+      isCompleted:
+          _parseBool(json['is_completed'] ?? json['isCompleted']) ?? false,
     );
   }
 
@@ -46,9 +47,11 @@ class OnboardingProgressResponseModel {
     final stepsRaw = json['steps'];
     final parsedSteps = (stepsRaw is List ? stepsRaw : const <dynamic>[])
         .whereType<Map>()
-        .map((e) => OnboardingProgressStepModel.fromJson(
-              Map<String, dynamic>.from(e),
-            ))
+        .map(
+          (e) => OnboardingProgressStepModel.fromJson(
+            Map<String, dynamic>.from(e),
+          ),
+        )
         .toList(growable: false);
 
     final completionRaw =
@@ -58,8 +61,13 @@ class OnboardingProgressResponseModel {
         : int.tryParse(completionRaw?.toString() ?? '') ?? 0;
 
     return OnboardingProgressResponseModel(
-      success: OnboardingProgressStepModel._parseBool(json['success'] ?? json['status']) ?? false,
-      overallStatus: (json['overall_status'] ?? json['overallStatus'])?.toString(),
+      success:
+          OnboardingProgressStepModel._parseBool(
+            json['success'] ?? json['status'],
+          ) ??
+          false,
+      overallStatus: (json['overall_status'] ?? json['overallStatus'])
+          ?.toString(),
       steps: parsedSteps,
       completionPercentage: completion.clamp(0, 100),
     );

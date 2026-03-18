@@ -1,13 +1,20 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:goapp/core/storage/onboarding_submission_store.dart';
+import 'package:goapp/features/document_verify/data/datasources/submit_all_documents_remote_data_source.dart';
 import 'package:goapp/features/document_verify/presentation/cubit/verification_state.dart';
 
 import '../model/document_model.dart';
 import '../model/document_progress_store.dart';
 
 class VerificationCubit extends Cubit<VerificationState> {
-  VerificationCubit() : super(VerificationState.initial()) {
+  VerificationCubit({
+    required SubmitAllDocumentsRemoteDataSource submitAllDataSource,
+  }) : _submitAllDataSource = submitAllDataSource,
+       super(VerificationState.initial()) {
     syncFromStore();
   }
+
+  final SubmitAllDocumentsRemoteDataSource _submitAllDataSource;
 
   void syncFromStore() {
     final profileImageUploaded = DocumentProgressStore.isProfileImageUploaded();
@@ -23,6 +30,10 @@ class VerificationCubit extends Cubit<VerificationState> {
         isProfileImageUploaded: profileImageUploaded,
       ),
     );
+  }
+
+  void setDeclarationAccepted(bool value) {
+    emit(state.copyWith(declarationAccepted: value, clearError: true));
   }
 
   Future<void> uploadDocument(DocumentType type) async {
@@ -86,11 +97,11 @@ class VerificationCubit extends Cubit<VerificationState> {
         status: completed ? DocumentStatus.completed : DocumentStatus.required,
       );
     }).toList();
-    final canSubmit =
+    final docsComplete =
         profileImageUploaded && syncedDocs.every((doc) => doc.isCompleted);
 
-    if (!canSubmit) {
-      final errorMessage = !profileImageUploaded
+    if (!docsComplete) {
+      final String errorMessage = !profileImageUploaded
           ? 'Please upload your profile picture before proceeding.'
           : 'Please complete all required documents before submitting.';
 
@@ -111,6 +122,17 @@ class VerificationCubit extends Cubit<VerificationState> {
       return;
     }
 
+    if (!state.declarationAccepted) {
+      emit(
+        state.copyWith(
+          documents: syncedDocs,
+          isProfileImageUploaded: profileImageUploaded,
+          errorMessage: 'Please accept the declaration to submit.',
+        ),
+      );
+      return;
+    }
+
     emit(
       state.copyWith(
         documents: syncedDocs,
@@ -120,9 +142,36 @@ class VerificationCubit extends Cubit<VerificationState> {
       ),
     );
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final response = await _submitAllDataSource.submitAll(
+        declarationAccepted: state.declarationAccepted,
+      );
 
-    emit(state.copyWith(isSubmitting: false, isSubmitted: true));
+      final String submissionId = (response.submissionId ?? '').trim();
+      if (submissionId.isNotEmpty) {
+        await OnboardingSubmissionStore.save(
+          submissionId: submissionId,
+          status: response.status,
+        );
+      }
+
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          isSubmitted: true,
+          submissionId: submissionId.isNotEmpty ? submissionId : null,
+          submissionStatus: response.status,
+          submissionMessage: response.message,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: e.toString().replaceFirst('Exception: ', '').trim(),
+        ),
+      );
+    }
   }
 
   void reset() {

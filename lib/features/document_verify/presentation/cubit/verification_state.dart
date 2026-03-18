@@ -7,15 +7,23 @@ class VerificationState extends Equatable {
     required this.documents,
     this.isSubmitting = false,
     this.isSubmitted = false,
+    this.declarationAccepted = false,
     this.errorMessage,
     this.isProfileImageUploaded = false,
+    this.submissionId,
+    this.submissionStatus,
+    this.submissionMessage,
   });
 
   final List<Document> documents;
   final bool isSubmitting;
   final bool isSubmitted;
+  final bool declarationAccepted;
   final String? errorMessage;
   final bool isProfileImageUploaded;
+  final String? submissionId;
+  final String? submissionStatus;
+  final String? submissionMessage;
 
   factory VerificationState.initial() {
     return const VerificationState(
@@ -36,6 +44,7 @@ class VerificationState extends Equatable {
         ),
       ],
       isProfileImageUploaded: false,
+      declarationAccepted: false,
     );
   }
 
@@ -53,23 +62,33 @@ class VerificationState extends Equatable {
   int get progressPercent => (progressPercentage * 100).round();
 
   bool get canSubmit =>
-      isProfileImageUploaded && completedCount == documents.length;
+      declarationAccepted &&
+      isProfileImageUploaded &&
+      completedCount == documents.length;
 
   VerificationState copyWith({
     List<Document>? documents,
     bool? isSubmitting,
     bool? isSubmitted,
+    bool? declarationAccepted,
     String? errorMessage,
     bool? isProfileImageUploaded,
+    String? submissionId,
+    String? submissionStatus,
+    String? submissionMessage,
     bool clearError = false,
   }) {
     return VerificationState(
       documents: documents ?? this.documents,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       isSubmitted: isSubmitted ?? this.isSubmitted,
+      declarationAccepted: declarationAccepted ?? this.declarationAccepted,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       isProfileImageUploaded:
           isProfileImageUploaded ?? this.isProfileImageUploaded,
+      submissionId: submissionId ?? this.submissionId,
+      submissionStatus: submissionStatus ?? this.submissionStatus,
+      submissionMessage: submissionMessage ?? this.submissionMessage,
     );
   }
 
@@ -78,7 +97,11 @@ class VerificationState extends Equatable {
     documents,
     isSubmitting,
     isSubmitted,
+    declarationAccepted,
     errorMessage,
     isProfileImageUploaded,
+    submissionId,
+    submissionStatus,
+    submissionMessage,
   ];
 }

@@ -56,6 +56,54 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
     );
   }
 
+  Future<void> _continueWithSelection(Vehicle selectedVehicle) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final cubit = context.read<VehicleSelectionCubit>();
+
+    final String? message = await cubit.submitSelectedVehicleType(
+      vehicleTypeId: selectedVehicle.vehicleTypeId,
+    );
+
+    if (!mounted) return;
+
+    final String? error = cubit.state.errorMessage;
+    if (error != null) {
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(content: Text(error), duration: const Duration(seconds: 2)),
+        );
+      return;
+    }
+
+    if (message != null && message.trim().isNotEmpty) {
+      messenger.clearSnackBars();
+      await messenger
+          .showSnackBar(
+            SnackBar(
+              content: Text(message.trim()),
+              duration: const Duration(milliseconds: 900),
+            ),
+          )
+          .closed;
+    }
+
+    await RegistrationProgressStore.setStep(
+      RegistrationStep.vehicleDetails,
+      cityId: widget.selectedCity.id,
+      vehicleType: selectedVehicle.type.name,
+      vehicleTypeId: selectedVehicle.vehicleTypeId,
+      clearDocumentStep: true,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VehicleDetailsScreen(vehicleType: selectedVehicle.type),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -142,27 +190,12 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
                     ),
                   ),
                 _ConfirmButton(
-                  enabled: state.hasSelection,
+                  enabled: state.hasSelection && !state.isLoading,
                   vehicleLabel: state.selectedVehicle?.label,
                   onTap: () {
-                    if (state.hasSelection) {
-                      unawaited(
-                        RegistrationProgressStore.setStep(
-                          RegistrationStep.vehicleDetails,
-                          cityId: widget.selectedCity.id,
-                          vehicleType: state.selectedVehicle!.type.name,
-                          vehicleTypeId: state.selectedVehicle!.vehicleTypeId,
-                          clearDocumentStep: true,
-                        ),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => VehicleDetailsScreen(
-                            vehicleType: state.selectedVehicle!.type,
-                          ),
-                        ),
-                      );
-                    }
+                    final selected = state.selectedVehicle;
+                    if (selected == null) return;
+                    unawaited(_continueWithSelection(selected));
                   },
                 ),
               ],
@@ -191,10 +224,7 @@ class _VehicleTypesError extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.gray.shade600,
-              ),
+              style: TextStyle(fontSize: 14, color: AppColors.gray.shade600),
             ),
             const SizedBox(height: 12),
             SizedBox(

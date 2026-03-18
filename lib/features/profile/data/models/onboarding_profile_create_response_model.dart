@@ -17,8 +17,7 @@ class OnboardingProfileCreateResponseModel {
     return OnboardingProfileCreateResponseModel(
       success: _parseBool(json['success'] ?? json['status']) ?? false,
       message: (json['message'] ?? json['error'] ?? '').toString(),
-      driverId:
-          json['driverId']?.toString() ?? json['driver_id']?.toString(),
+      driverId: json['driverId']?.toString() ?? json['driver_id']?.toString(),
       requestId:
           json['requestId']?.toString() ?? json['request_id']?.toString(),
     );
