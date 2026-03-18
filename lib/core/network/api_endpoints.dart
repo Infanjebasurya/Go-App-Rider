@@ -7,6 +7,10 @@ class ApiEndpoints {
   static const String authResendOtp = '/auth/resend-otp';
   static const String profileCreate = '/api/v1/profile/create';
   static const String onboardingProfile = '/api/v1/onboarding/profile';
+  static const String documentsAadhaar = '/api/v1/documents/aadhaar';
+  static const String documentsPan = '/api/v1/documents/pan';
+  static const String documentsStatus = '/api/v1/documents/status';
   static const String vehicleTypes = '/api/v1/vehicles/types';
+  static const String vehicleSelect = '/api/v1/vehicles/select';
   static const String captainProfile = '/v1/captain/profile';
 }

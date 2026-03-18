@@ -1,15 +1,15 @@
 class SaveSelectedVehicleTypeRequestModel {
   const SaveSelectedVehicleTypeRequestModel({
-    required this.vehicleTypeCode,
+    required this.vehicleTypeId,
     this.cityId,
   });
 
-  final String vehicleTypeCode;
+  final String vehicleTypeId;
   final String? cityId;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'vehicle_type': vehicleTypeCode,
+      'vehicle_type_id': vehicleTypeId,
       if (cityId != null) 'city_id': cityId,
     };
   }

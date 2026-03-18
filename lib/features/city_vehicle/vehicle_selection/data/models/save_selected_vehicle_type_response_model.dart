@@ -3,12 +3,14 @@ class SaveSelectedVehicleTypeResponseModel {
     this.message,
     this.success,
     this.selectionId,
+    this.vehicleTypeId,
     this.vehicleTypeCode,
   });
 
   final String? message;
   final bool? success;
   final String? selectionId;
+  final String? vehicleTypeId;
   final String? vehicleTypeCode;
 
   factory SaveSelectedVehicleTypeResponseModel.fromJson(
@@ -19,6 +21,8 @@ class SaveSelectedVehicleTypeResponseModel {
       success: _parseBool(json['success'] ?? json['status']),
       selectionId: (json['selection_id'] ?? json['selectionId'] ?? json['id'])
           ?.toString(),
+      vehicleTypeId:
+          (json['vehicle_type_id'] ?? json['vehicleTypeId'])?.toString(),
       vehicleTypeCode: (json['vehicle_type'] ?? json['vehicleType'])
           ?.toString(),
     );
@@ -29,6 +33,7 @@ class SaveSelectedVehicleTypeResponseModel {
       if (message != null) 'message': message,
       if (success != null) 'success': success,
       if (selectionId != null) 'selection_id': selectionId,
+      if (vehicleTypeId != null) 'vehicle_type_id': vehicleTypeId,
       if (vehicleTypeCode != null) 'vehicle_type': vehicleTypeCode,
     };
   }

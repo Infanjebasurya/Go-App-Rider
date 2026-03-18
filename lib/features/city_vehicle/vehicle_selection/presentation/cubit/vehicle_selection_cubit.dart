@@ -1,10 +1,13 @@
 import 'package:dio/dio.dart';
+import 'dart:developer' as developer;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/config/api_config.dart';
 import 'package:goapp/core/network/api_endpoints.dart';
 import 'package:goapp/core/storage/auth_token_store.dart';
 import 'package:goapp/core/utils/env.dart';
 import 'package:goapp/features/city_vehicle/vehicle_selection/data/models/get_vehicle_types_response_model.dart';
+import 'package:goapp/features/city_vehicle/vehicle_selection/data/models/save_selected_vehicle_type_request_model.dart';
+import 'package:goapp/features/city_vehicle/vehicle_selection/data/models/save_selected_vehicle_type_response_model.dart';
 import 'package:goapp/features/city_vehicle/vehicle_selection/presentation/model/vehicle_model.dart';
 
 class VehicleSelectionCubit extends Cubit<VehicleSelectionState> {
@@ -26,11 +29,16 @@ class VehicleSelectionCubit extends Cubit<VehicleSelectionState> {
 
   final Dio _dio;
 
+  void _log(String message) {
+    developer.log(message, name: 'VehicleSelection');
+  }
+
   Future<void> loadVehicleTypes({required String city}) async {
     emit(state.copyWith(isLoading: true, clearError: true));
 
     try {
       if (Env.mockApi) {
+        _log('Vehicle types -> MOCK_API enabled; using local fallback.');
         emit(state.copyWith(vehicles: kVehicles, isLoading: false));
         return;
       }
@@ -38,6 +46,7 @@ class VehicleSelectionCubit extends Cubit<VehicleSelectionState> {
       final token = AuthTokenStore.accessToken();
       final tokenType = AuthTokenStore.tokenType() ?? 'Bearer';
       if (token == null || token.isEmpty) {
+        _log('Vehicle types -> missing auth token.');
         emit(
           state.copyWith(
             isLoading: false,
@@ -47,12 +56,18 @@ class VehicleSelectionCubit extends Cubit<VehicleSelectionState> {
         return;
       }
 
+      _log(
+        'Vehicle types -> GET ${_dio.options.baseUrl}${ApiEndpoints.vehicleTypes}?city=$city',
+      );
       final Response<dynamic> response = await _dio.get(
         ApiEndpoints.vehicleTypes,
         queryParameters: <String, dynamic>{'city': city},
         options: Options(
           headers: <String, dynamic>{'Authorization': '$tokenType $token'},
         ),
+      );
+      _log(
+        'Vehicle types response <- [${response.statusCode}] ${response.data}',
       );
 
       if (response.data is! Map<String, dynamic>) {
@@ -106,6 +121,94 @@ class VehicleSelectionCubit extends Cubit<VehicleSelectionState> {
 
   void reset() {
     emit(VehicleSelectionState.initial());
+  }
+
+  Future<String?> submitSelectedVehicleType({
+    required String vehicleTypeId,
+  }) async {
+    if (vehicleTypeId.trim().isEmpty) {
+      return 'Please select a vehicle type.';
+    }
+
+    emit(state.copyWith(isLoading: true, clearError: true));
+
+    try {
+      if (Env.mockApi) {
+        _log('Vehicle select -> MOCK_API enabled; skipping backend call.');
+        emit(state.copyWith(isLoading: false));
+        return 'Vehicle type saved.';
+      }
+
+      final token = AuthTokenStore.accessToken();
+      final tokenType = AuthTokenStore.tokenType() ?? 'Bearer';
+      if (token == null || token.isEmpty) {
+        _log('Vehicle select -> missing auth token.');
+        final message = 'Session expired. Please sign in again.';
+        emit(state.copyWith(isLoading: false, errorMessage: message));
+        return message;
+      }
+
+      final body = SaveSelectedVehicleTypeRequestModel(
+        vehicleTypeId: vehicleTypeId,
+      ).toJson();
+
+      _log(
+        'Vehicle select -> POST ${_dio.options.baseUrl}${ApiEndpoints.vehicleSelect}',
+      );
+      _log('Vehicle select request body -> $body');
+
+      final Response<dynamic> response = await _dio.post(
+        ApiEndpoints.vehicleSelect,
+        data: body,
+        options: Options(
+          headers: <String, dynamic>{'Authorization': '$tokenType $token'},
+        ),
+      );
+
+      _log(
+        'Vehicle select response <- [${response.statusCode}] ${response.data}',
+      );
+
+      if (response.data is Map<String, dynamic>) {
+        final parsed = SaveSelectedVehicleTypeResponseModel.fromJson(
+          response.data as Map<String, dynamic>,
+        );
+        if (parsed.success == true) {
+          emit(state.copyWith(isLoading: false));
+          final message =
+              parsed.message?.trim().isNotEmpty == true
+                  ? parsed.message!.trim()
+                  : 'Vehicle type saved.';
+          return message;
+        }
+        final message = parsed.message?.trim().isNotEmpty == true
+            ? parsed.message!.trim()
+            : 'Failed to save vehicle selection.';
+        emit(state.copyWith(isLoading: false, errorMessage: message));
+        return message;
+      }
+
+      // Some backends return empty body on success.
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        emit(state.copyWith(isLoading: false));
+        return 'Vehicle type saved.';
+      }
+
+      final message = 'Failed to save vehicle selection.';
+      emit(state.copyWith(isLoading: false, errorMessage: message));
+      return message;
+    } on DioException catch (error) {
+      _log(
+        'Vehicle select error <- [${error.response?.statusCode}] ${error.response?.data}',
+      );
+      final message = _mapDioError(error);
+      emit(state.copyWith(isLoading: false, errorMessage: message));
+      return message;
+    } catch (_) {
+      final message = 'Failed to save vehicle selection.';
+      emit(state.copyWith(isLoading: false, errorMessage: message));
+      return message;
+    }
   }
 
   Vehicle? _mapApiTypeToVehicle(VehicleTypeItemModel item) {
