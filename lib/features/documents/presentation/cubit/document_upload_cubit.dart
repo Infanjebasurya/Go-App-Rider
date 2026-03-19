@@ -288,7 +288,11 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
   }
 
   Future<void> saveAndNext() {
-    return _saveAndNext(this);
+    return _saveAndNext(this, advance: true);
+  }
+
+  Future<void> saveAndUploadOnly() {
+    return _saveAndNext(this, advance: false);
   }
 
   bool validateCurrentDocumentStep() {
@@ -324,7 +328,7 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     return '$y-$m-$d';
   }
 
-  Future<void> _uploadDrivingLicenseAndContinue() async {
+  Future<void> _uploadDrivingLicenseAndContinue({required bool advance}) async {
     final StepData step = state.currentDocStep;
     final String driverId = (DriverIdStore.driverId() ?? '').trim();
     final String? filePath = step.frontPath;
@@ -338,7 +342,7 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
       driverId: driverId,
       filePath: filePath ?? '',
       dlNumber: dlNumber,
-      expiryDate: expiryDate,
+      expiryDate: expiryDate.isEmpty ? null : expiryDate,
     );
 
     if (response.documentId != null && response.documentId!.trim().isNotEmpty) {
@@ -361,12 +365,14 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     _emitState(
       state.copyWith(
         isSubmitting: false,
-        currentStepIndex: state.currentStepIndex + 1,
+        currentStepIndex: advance
+            ? state.currentStepIndex + 1
+            : state.currentStepIndex,
       ),
     );
   }
 
-  Future<void> _uploadVehicleRcAndContinue() async {
+  Future<void> _uploadVehicleRcAndContinue({required bool advance}) async {
     final StepData step = state.currentDocStep;
     final String? filePath = step.frontPath;
     final String rcNumber = DocumentNumberRules.normalize(
@@ -398,12 +404,14 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     _emitState(
       state.copyWith(
         isSubmitting: false,
-        currentStepIndex: state.currentStepIndex + 1,
+        currentStepIndex: advance
+            ? state.currentStepIndex + 1
+            : state.currentStepIndex,
       ),
     );
   }
 
-  Future<void> _uploadProfileImageAndContinue() async {
+  Future<void> _uploadProfileImageAndContinue({required bool advance}) async {
     final StepData step = state.currentDocStep;
     final String? filePath = step.frontPath;
 
@@ -413,7 +421,9 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
           statusMessage: 'Profile image uploaded successfully.',
           statusIsError: false,
           isSubmitting: false,
-          currentStepIndex: state.currentStepIndex + 1,
+          currentStepIndex: advance
+              ? state.currentStepIndex + 1
+              : state.currentStepIndex,
         ),
       );
       return;
@@ -439,7 +449,9 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     _emitState(
       state.copyWith(
         isSubmitting: false,
-        currentStepIndex: state.currentStepIndex + 1,
+        currentStepIndex: advance
+            ? state.currentStepIndex + 1
+            : state.currentStepIndex,
       ),
     );
   }

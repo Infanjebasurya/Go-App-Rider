@@ -41,6 +41,10 @@ import 'package:goapp/features/home/presentation/cubit/trip_navigation_cubit.dar
 import 'package:goapp/features/documents/presentation/cubit/documents_cubit.dart';
 import 'package:goapp/features/documents/presentation/cubit/document_upload_cubit.dart';
 import 'package:goapp/features/documents/presentation/services/document_upload_file_service.dart';
+import 'package:goapp/features/documents/data/datasources/driving_license_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/document_details_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/profile_image_upload_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/vehicle_rc_upload_remote_data_source.dart';
 import 'package:goapp/features/documents/aadhaar_upload/data/repositories/aadhaar_upload_repository_impl.dart';
 import 'package:goapp/features/documents/aadhaar_upload/data/services/aadhaar_upload_service.dart';
 import 'package:goapp/features/documents/aadhaar_upload/domain/repositories/aadhaar_upload_repository.dart';
@@ -60,6 +64,7 @@ import 'package:goapp/features/documents/pan_upload/data/services/pan_upload_ser
     as pan_upload;
 import 'package:goapp/features/documents/pan_upload/domain/repositories/pan_upload_repository.dart';
 import 'package:goapp/features/documents/pan_upload/presentation/cubit/pan_upload_cubit.dart';
+import 'package:goapp/features/document_verify/data/datasources/submit_all_documents_remote_data_source.dart';
 import 'package:goapp/features/document_verify/presentation/cubit/verification_cubit.dart';
 import 'package:goapp/features/demand_planner/data/datasources/demand_planner_mock_api.dart';
 import 'package:goapp/features/demand_planner/presentation/cubit/demand_planner_cubit.dart';
@@ -429,6 +434,18 @@ void _registerDemandPlanner() {
 
 void _registerDocuments() {
   sl
+    ..registerLazySingleton<DocumentDetailsRemoteDataSource>(
+      () => DocumentDetailsRemoteDataSourceImpl(),
+    )
+    ..registerLazySingleton<DrivingLicenseUploadRemoteDataSource>(
+      () => DrivingLicenseUploadRemoteDataSourceImpl(),
+    )
+    ..registerLazySingleton<ProfileImageUploadRemoteDataSource>(
+      () => ProfileImageUploadRemoteDataSourceImpl(),
+    )
+    ..registerLazySingleton<VehicleRcUploadRemoteDataSource>(
+      () => VehicleRcUploadRemoteDataSourceImpl(),
+    )
     ..registerLazySingleton<AadhaarUploadService>(
       () => AadhaarUploadServiceImpl(mode: DataMode.mock),
     )
@@ -481,6 +498,9 @@ void _registerDocuments() {
       ),
     )
     ..registerFactory<DocumentsCubit>(() => DocumentsCubit())
+    ..registerLazySingleton<SubmitAllDocumentsRemoteDataSource>(
+      () => SubmitAllDocumentsRemoteDataSourceImpl(),
+    )
     ..registerFactory<VerificationCubit>(
       () => VerificationCubit(submitAllDataSource: sl()),
     )

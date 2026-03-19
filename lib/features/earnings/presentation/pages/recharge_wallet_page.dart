@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/theme/app_colors.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/earnings/presentation/cubit/earnings_cubit.dart';
 import 'package:goapp/features/earnings/presentation/cubit/earnings_state.dart';
 import 'package:goapp/features/earnings/presentation/pages/recharge_success_page.dart';
@@ -156,10 +157,9 @@ class RechargeWalletPage extends StatelessWidget {
                       .rechargeWallet();
                   if (!context.mounted) return;
                   if (!ok) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Enter a valid amount to recharge'),
-                      ),
+                    SnackBarUtils.showError(
+                      context,
+                      'Enter a valid amount to recharge',
                     );
                     return;
                   }

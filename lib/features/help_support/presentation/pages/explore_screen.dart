@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/theme/app_colors.dart';
 import 'package:goapp/core/di/injection.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/help_support/presentation/cubit/help_cubit.dart';
 import 'package:goapp/features/help_support/presentation/pages/nearby_demand_location/nearby_demand_location_screen.dart';
 import 'package:goapp/features/help_support/presentation/pages/earnings/earnings_help_screen.dart';
@@ -34,9 +35,7 @@ class ExploreScreen extends StatelessWidget {
                   .toList(growable: false);
 
         void openComingSoon(String title) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('$title coming soon')));
+          SnackBarUtils.show(context, '$title coming soon');
         }
 
         void openIssue(_ExploreIssueItem item) {

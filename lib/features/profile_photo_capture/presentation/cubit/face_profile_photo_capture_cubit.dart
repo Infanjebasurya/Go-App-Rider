@@ -50,6 +50,15 @@ class FaceProfilePhotoCaptureCubit extends Cubit<FaceProfilePhotoCaptureState> {
 
   CameraController? get controller => _controller;
 
+  Future<void> prepareToExit() async {
+    await _stopStreamIfNeeded();
+    try {
+      await _controller?.dispose();
+    } catch (_) {}
+    _controller = null;
+    _camera = null;
+  }
+
   Future<void> start() async {
     emit(
       state.copyWith(
@@ -448,11 +457,10 @@ class FaceProfilePhotoCaptureCubit extends Cubit<FaceProfilePhotoCaptureState> {
 
   @override
   Future<void> close() async {
-    await _stopStreamIfNeeded();
-    await _faceDetectionService.close();
-    await _controller?.dispose();
-    _controller = null;
-    _camera = null;
+    await prepareToExit();
+    try {
+      await _faceDetectionService.close();
+    } catch (_) {}
     return super.close();
   }
 }

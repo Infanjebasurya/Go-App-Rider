@@ -122,17 +122,6 @@ class VerificationCubit extends Cubit<VerificationState> {
       return;
     }
 
-    if (!state.declarationAccepted) {
-      emit(
-        state.copyWith(
-          documents: syncedDocs,
-          isProfileImageUploaded: profileImageUploaded,
-          errorMessage: 'Please accept the declaration to submit.',
-        ),
-      );
-      return;
-    }
-
     emit(
       state.copyWith(
         documents: syncedDocs,
@@ -144,7 +133,7 @@ class VerificationCubit extends Cubit<VerificationState> {
 
     try {
       final response = await _submitAllDataSource.submitAll(
-        declarationAccepted: state.declarationAccepted,
+        declarationAccepted: true,
       );
 
       final String submissionId = (response.submissionId ?? '').trim();

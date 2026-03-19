@@ -11,7 +11,7 @@ abstract interface class DrivingLicenseUploadRemoteDataSource {
     required String driverId,
     required String filePath,
     required String dlNumber,
-    required String expiryDate,
+    String? expiryDate,
   });
 }
 
@@ -43,7 +43,7 @@ class DrivingLicenseUploadRemoteDataSourceImpl
     required String driverId,
     required String filePath,
     required String dlNumber,
-    required String expiryDate,
+    String? expiryDate,
   }) async {
     final String trimmedDriverId = driverId.trim();
     if (trimmedDriverId.isEmpty) {
@@ -57,10 +57,7 @@ class DrivingLicenseUploadRemoteDataSourceImpl
     if (trimmedDlNumber.isEmpty) {
       throw Exception('Driving license number is required.');
     }
-    final String trimmedExpiry = expiryDate.trim();
-    if (trimmedExpiry.isEmpty) {
-      throw Exception('Expiry date is required.');
-    }
+    final String trimmedExpiry = (expiryDate ?? '').trim();
 
     _refreshBaseUrl();
 
@@ -81,12 +78,15 @@ class DrivingLicenseUploadRemoteDataSourceImpl
     }
 
     final String tokenType = (AuthTokenStore.tokenType() ?? 'Bearer').trim();
-    final FormData body = FormData.fromMap(<String, dynamic>{
+    final Map<String, dynamic> bodyMap = <String, dynamic>{
       'file': await MultipartFile.fromFile(trimmedFilePath),
       'dl_number': trimmedDlNumber,
-      'expiry_date': trimmedExpiry,
       'driver_id': trimmedDriverId,
-    });
+    };
+    if (trimmedExpiry.isNotEmpty) {
+      bodyMap['expiry_date'] = trimmedExpiry;
+    }
+    final FormData body = FormData.fromMap(bodyMap);
 
     final Options options = Options(
       headers: <String, String>{

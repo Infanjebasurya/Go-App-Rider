@@ -73,9 +73,10 @@ const List<StepConfig> kStepConfigs = [
     allowedPattern: r'[A-Za-z0-9]',
     forceUppercase: true,
     maxLength: 15,
-    requiresBackSide: false,
-    requiresExpiryDate: true,
-    frontLabel: 'Driving License Image',
+    requiresBackSide: true,
+    requiresExpiryDate: false,
+    frontLabel: 'Front Side',
+    backLabel: 'Back Side',
   ),
   StepConfig(
     step: DocumentStep.vehicleRC,
@@ -87,8 +88,9 @@ const List<StepConfig> kStepConfigs = [
     allowedPattern: r'[A-Za-z0-9]',
     forceUppercase: true,
     maxLength: 10,
-    requiresBackSide: false,
-    frontLabel: 'Vehicle RC Image',
+    requiresBackSide: true,
+    frontLabel: 'Front Side',
+    backLabel: 'Back Side',
   ),
   StepConfig(
     step: DocumentStep.identityAadhaar,
@@ -273,19 +275,14 @@ class StepData extends Equatable {
   bool get isProfileStep => step == DocumentStep.profilePhoto;
   bool get requiresBackSide =>
       step != DocumentStep.identityPan &&
-      step != DocumentStep.drivingLicense &&
-      step != DocumentStep.vehicleRC &&
       step != DocumentStep.profilePhoto;
 
-  bool get requiresExpiryDate => step == DocumentStep.drivingLicense;
+  bool get requiresExpiryDate => false;
 
   bool get isComplete {
     if (isProfileStep) return frontCaptured;
     if (step == DocumentStep.drivingLicense) {
-      return frontCaptured &&
-          isNumberValid &&
-          expiryDate.trim().isNotEmpty &&
-          expiryDateError == null;
+      return frontCaptured && isNumberValid;
     }
     if (step == DocumentStep.vehicleRC) {
       return frontCaptured && isNumberValid;

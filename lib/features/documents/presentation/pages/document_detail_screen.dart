@@ -12,7 +12,7 @@ import 'package:goapp/features/documents/data/datasources/document_details_remot
 import 'package:goapp/features/documents/data/models/document_details_models.dart';
 import 'package:goapp/features/documents/presentation/model/document_model.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
-import 'package:goapp/features/documents/presentation/pages/document_upload_screen.dart';
+import 'package:goapp/features/documents/presentation/pages/driving_license_upload_screen.dart';
 import 'package:goapp/features/documents/presentation/pages/vehicle_rc_upload_screen.dart';
 
 class DocumentDetailScreen extends StatefulWidget {
@@ -39,6 +39,11 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   @override
   void initState() {
     super.initState();
+    if (!sl.isRegistered<DocumentDetailsRemoteDataSource>()) {
+      sl.registerLazySingleton<DocumentDetailsRemoteDataSource>(
+        () => DocumentDetailsRemoteDataSourceImpl(),
+      );
+    }
     _detailsApi = sl<DocumentDetailsRemoteDataSource>();
     if (_isDrivingLicense || _isVehicleRc) {
       _fetch();
@@ -477,7 +482,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   Future<void> _uploadDrivingLicense() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => const DocumentUploadScreen(initialStepIndex: 1),
+        builder: (_) => const DrivingLicenseUploadScreen(),
       ),
     );
     if (!mounted) return;

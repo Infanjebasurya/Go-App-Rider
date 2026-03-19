@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/di/injection.dart';
 import 'package:goapp/core/service/permission_service.dart';
 import 'package:goapp/core/theme/app_colors.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/profile_photo_capture/presentation/cubit/face_profile_photo_capture_cubit.dart';
 import 'package:goapp/features/profile_photo_capture/presentation/cubit/face_profile_photo_capture_state.dart';
 import 'package:goapp/features/profile_photo_capture/presentation/widgets/face_guide_overlay.dart';
@@ -41,9 +43,7 @@ class _ProfilePhotoCaptureView extends StatelessWidget {
           >(
             listener: (context, state) {
               if (state.status == FaceProfileCaptureStatus.failure) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(state.message)));
+                SnackBarUtils.showError(context, state.message);
               }
             },
             builder: (context, state) {
@@ -61,7 +61,13 @@ class _ProfilePhotoCaptureView extends StatelessWidget {
                       context.read<FaceProfilePhotoCaptureCubit>().retake(),
                   onConfirm: () {
                     final String? path = state.photo?.path;
-                    if (path != null) Navigator.of(context).pop<String>(path);
+                    if (path != null) {
+                      unawaited(
+                        context.read<FaceProfilePhotoCaptureCubit>()
+                            .prepareToExit(),
+                      );
+                      Navigator.of(context).pop<String>(path);
+                    }
                   },
                 ),
                 FaceProfileCaptureStatus.capturing => const _BusyView(

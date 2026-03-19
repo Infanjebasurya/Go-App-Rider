@@ -8,6 +8,7 @@ import 'package:goapp/core/di/injection.dart';
 import 'package:goapp/core/widgets/shadow_button.dart';
 import 'package:goapp/features/auth/presentation/theme/app_colors.dart';
 import 'package:goapp/features/auth/presentation/widgets/appbar.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/documents/aadhaar_upload/presentation/cubit/aadhaar_upload_cubit.dart';
 import 'package:goapp/features/documents/aadhaar_upload/presentation/cubit/aadhaar_upload_state.dart';
 
@@ -52,14 +53,10 @@ class _AadhaarUploadViewState extends State<_AadhaarUploadView> {
           listener: (context, state) {
             if (state.errorMessage != null &&
                 state.errorMessage!.trim().isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.errorMessage!.trim())),
-              );
+              SnackBarUtils.showError(context, state.errorMessage!.trim());
             }
             if (state.response != null && state.response!.success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Upload Successful')),
-              );
+              SnackBarUtils.show(context, 'Upload Successful');
             }
           },
           builder: (context, state) {

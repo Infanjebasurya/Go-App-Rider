@@ -11,26 +11,27 @@ import 'package:goapp/features/documents/presentation/cubit/document_upload_cubi
 import 'package:goapp/features/documents/presentation/model/document_upload_model.dart';
 import 'package:goapp/features/documents/presentation/pages/document_upload_sections.dart';
 
-class VehicleRcUploadScreen extends StatelessWidget {
-  const VehicleRcUploadScreen({super.key});
+class DrivingLicenseUploadScreen extends StatelessWidget {
+  const DrivingLicenseUploadScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<DocumentUploadCubit>(param1: 2),
-      child: const _VehicleRcUploadView(),
+      create: (_) => sl<DocumentUploadCubit>(param1: 1),
+      child: const _DrivingLicenseUploadView(),
     );
   }
 }
 
-class _VehicleRcUploadView extends StatefulWidget {
-  const _VehicleRcUploadView();
+class _DrivingLicenseUploadView extends StatefulWidget {
+  const _DrivingLicenseUploadView();
 
   @override
-  State<_VehicleRcUploadView> createState() => _VehicleRcUploadViewState();
+  State<_DrivingLicenseUploadView> createState() =>
+      _DrivingLicenseUploadViewState();
 }
 
-class _VehicleRcUploadViewState extends State<_VehicleRcUploadView> {
+class _DrivingLicenseUploadViewState extends State<_DrivingLicenseUploadView> {
   late final TextEditingController _numberController;
   bool _didPop = false;
 
@@ -83,14 +84,14 @@ class _VehicleRcUploadViewState extends State<_VehicleRcUploadView> {
         return Scaffold(
           backgroundColor: AppColors.white,
           appBar: AppAppBar(
-            title: 'Vehicle RC',
+            title: 'Driving License',
             onBack: () => Navigator.of(context).pop(),
           ),
           body: Column(
             children: [
               Expanded(
                 child: DocumentStepContent(
-                  key: const ValueKey('vehicle_rc_step'),
+                  key: const ValueKey('driving_license_step'),
                   config: state.currentConfig,
                   stepData: state.currentDocStep,
                   numberController: _numberController,
@@ -115,7 +116,7 @@ class _VehicleRcUploadViewState extends State<_VehicleRcUploadView> {
   }
 
   bool _shouldShowSuccessSnackbar(DocumentUploadState state) {
-    final String key = 'snackbar_once.${DocumentStep.vehicleRC.name}';
+    final String key = 'snackbar_once.${DocumentStep.drivingLicense.name}';
     final String signature =
         'front:${state.currentDocStep.frontPath ?? ''}|back:${state.currentDocStep.backPath ?? ''}|num:${state.currentDocStep.documentNumber.trim()}';
 

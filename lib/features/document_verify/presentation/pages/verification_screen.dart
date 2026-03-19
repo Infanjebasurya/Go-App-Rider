@@ -162,25 +162,25 @@ class _VerificationViewState extends State<_VerificationView> {
         .read<VerificationCubit>();
     final NavigatorState navigator = Navigator.of(context);
     final stepIndex = _stepIndexForDoc(doc.type);
-    if (stepIndex != null) {
-      unawaited(
-        RegistrationProgressStore.setStep(
-          RegistrationStep.documentUpload,
-          documentStepIndex: stepIndex,
-        ),
-      );
-      navigator
-          .push(
-            MaterialPageRoute(
-              builder: (_) => DocumentUploadScreen(initialStepIndex: stepIndex),
-            ),
-          )
-          .then((_) {
-            if (!mounted) return;
-            verificationCubit.syncFromStore();
-          });
-      return;
-    }
+    if (stepIndex == null) return;
+
+    unawaited(
+      RegistrationProgressStore.setStep(
+        RegistrationStep.documentUpload,
+        documentStepIndex: stepIndex,
+      ),
+    );
+
+    navigator
+        .push(
+          MaterialPageRoute(
+            builder: (_) => DocumentUploadScreen(initialStepIndex: stepIndex),
+          ),
+        )
+        .then((_) {
+      if (!mounted) return;
+      verificationCubit.syncFromStore();
+    });
   }
 
   int? _stepIndexForDoc(DocumentType type) {
@@ -414,36 +414,6 @@ class _SubmitSection extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Checkbox(
-                value: state.declarationAccepted,
-                activeColor: AppColors.emerald,
-                onChanged: state.isSubmitting
-                    ? null
-                    : (v) => context
-                          .read<VerificationCubit>()
-                          .setDeclarationAccepted(v ?? false),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    'I confirm that all the uploaded documents are valid and belong to me.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.35,
-                      color: AppColors.gray.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
           SizedBox(
             width: double.infinity,
             height: 52,

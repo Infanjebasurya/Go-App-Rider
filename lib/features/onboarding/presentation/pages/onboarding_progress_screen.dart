@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/theme/app_colors.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/document_verify/presentation/pages/verification_screen.dart';
 import 'package:goapp/features/documents/presentation/model/document_upload_model.dart';
 import 'package:goapp/features/documents/presentation/pages/document_upload_screen.dart';
@@ -62,9 +63,7 @@ class _OnboardingProgressViewState extends State<_OnboardingProgressView> {
             listener: (context, state) {
               final String error = (state.errorMessage ?? '').trim();
               if (error.isNotEmpty) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(error)));
+                SnackBarUtils.showError(context, error);
               }
 
               if (!_didNavigateHome && state.isSuccess) {
@@ -72,9 +71,7 @@ class _OnboardingProgressViewState extends State<_OnboardingProgressView> {
                 final String message = (state.message ?? '').trim().isNotEmpty
                     ? state.message!.trim()
                     : 'Application submitted successfully.';
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(message)));
+                SnackBarUtils.show(context, message);
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
                   (route) => false,
@@ -206,9 +203,7 @@ class _OnboardingProgressViewState extends State<_OnboardingProgressView> {
         target = DocumentUploadScreen(initialStepIndex: bankIndex);
         break;
       default:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Unknown step: $stepId')));
+        SnackBarUtils.showError(context, 'Unknown step: $stepId');
         return;
     }
 

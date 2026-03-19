@@ -8,6 +8,7 @@ import 'package:goapp/core/storage/text_field_store.dart';
 import 'package:goapp/core/storage/user_cache_model.dart';
 import 'package:goapp/core/storage/user_cache_store.dart';
 import 'package:goapp/features/auth/presentation/widgets/appbar.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/city_vehicle/city_selection/presentation/pages/city_selection_screen.dart';
 import 'package:goapp/features/profile/domain/entities/profile.dart';
 import 'package:goapp/features/profile/presentation/bloc/profile_bloc.dart';
@@ -113,9 +114,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       _termsUri.toString(),
     );
     if (!mounted || launched) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Unable to open link')));
+    SnackBarUtils.showError(context, 'Unable to open link');
   }
 
   String _formatDob(DateTime date) {
@@ -236,12 +235,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       ),
                     );
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Profile saved successfully'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                    SnackBarUtils.show(context, 'Profile saved successfully');
                     _didNavigate = true;
                     _clearForm();
                     Navigator.of(context)

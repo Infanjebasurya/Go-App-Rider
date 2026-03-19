@@ -8,6 +8,7 @@ import 'package:goapp/core/storage/user_cache_store.dart';
 import 'package:goapp/core/theme/app_colors.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
 import 'package:goapp/features/auth/presentation/theme/auth_ui_tokens.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/profile/presentation/cubit/profile_edit_cubit.dart';
 import 'package:goapp/features/profile/presentation/cubit/profile_edit_state.dart';
 
@@ -43,9 +44,7 @@ class _GoAppIdView extends StatelessWidget {
               size: 22,
             ),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Share will be added soon.')),
-              );
+              SnackBarUtils.show(context, 'Share will be added soon.');
             },
           ),
         ],

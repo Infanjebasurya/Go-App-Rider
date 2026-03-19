@@ -31,7 +31,7 @@ class _FakeDrivingLicenseUploadRemoteDataSource
     required String driverId,
     required String filePath,
     required String dlNumber,
-    required String expiryDate,
+    String? expiryDate,
   }) async {
     return const UploadDrivingLicenseResponseModel(
       success: true,
@@ -244,9 +244,9 @@ void main() {
       await cubit.captureFront(source: AppImageSource.gallery);
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 1);
-      expect(cubit.state.currentDocStep.expiryDateError, isNotNull);
+      expect(cubit.state.currentDocStep.imageError, isNotNull);
 
-      cubit.updateExpiryDate(DateTime(2035, 12, 31));
+      await cubit.captureBack(source: AppImageSource.gallery);
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 2);
     });
@@ -256,7 +256,7 @@ void main() {
       addTearDown(cubit.close);
 
       await cubit.captureFront(source: AppImageSource.gallery);
-      cubit.updateExpiryDate(DateTime(2035, 12, 31));
+      await cubit.captureBack(source: AppImageSource.gallery);
       cubit.updateDocumentNumber('abc123');
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 1);
@@ -272,6 +272,7 @@ void main() {
       addTearDown(cubit.close);
 
       await cubit.captureFront(source: AppImageSource.gallery);
+      await cubit.captureBack(source: AppImageSource.gallery);
       cubit.updateDocumentNumber('12345');
       await cubit.saveAndNext();
       expect(cubit.state.currentStepIndex, 2);
@@ -347,7 +348,6 @@ void main() {
       await licenseCubit.captureFront(source: AppImageSource.gallery);
       await licenseCubit.captureBack(source: AppImageSource.gallery);
       licenseCubit.updateDocumentNumber('mh 12-2018 0012345');
-      licenseCubit.updateExpiryDate(DateTime(2035, 12, 31));
       await licenseCubit.saveAndNext();
       expect(licenseCubit.state.steps[1].documentNumber, 'MH1220180012345');
 
@@ -355,6 +355,7 @@ void main() {
       addTearDown(rcCubit.close);
 
       await rcCubit.captureFront(source: AppImageSource.gallery);
+      await rcCubit.captureBack(source: AppImageSource.gallery);
       rcCubit.updateDocumentNumber('tn 01 ab 1234');
       await rcCubit.saveAndNext();
       expect(rcCubit.state.steps[2].documentNumber, 'TN01AB1234');
@@ -369,7 +370,6 @@ void main() {
         await uploadCubit.captureFront(source: AppImageSource.gallery);
         await uploadCubit.captureBack(source: AppImageSource.gallery);
         uploadCubit.updateDocumentNumber('MH1220180012345');
-        uploadCubit.updateExpiryDate(DateTime(2035, 12, 31));
         await uploadCubit.saveAndNext();
 
         expect(uploadCubit.state.currentStepIndex, 2);

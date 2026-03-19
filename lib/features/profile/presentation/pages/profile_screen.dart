@@ -9,6 +9,7 @@ import 'package:goapp/core/storage/trip_session_store.dart';
 import 'package:goapp/core/storage/user_cache_store.dart';
 import 'package:goapp/features/auth/presentation/pages/r_login_page.dart';
 import 'package:goapp/features/auth/presentation/theme/auth_ui_tokens.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/profile/presentation/cubit/profile_edit_cubit.dart';
 import 'package:goapp/features/profile/presentation/cubit/profile_edit_state.dart';
 import 'package:goapp/features/profile/presentation/pages/profile_screen/widgets/profile_edit_field_sheet.dart';
@@ -63,9 +64,7 @@ class _ProfileView extends StatelessWidget {
         listener: (BuildContext context, ProfileEditState state) {
           final message = state.errorMessage;
           if (message != null && message.trim().isNotEmpty) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(message.trim())));
+            SnackBarUtils.showError(context, message.trim());
           }
           if (state.status == ProfileEditStatus.loggedOut ||
               state.status == ProfileEditStatus.deleted) {

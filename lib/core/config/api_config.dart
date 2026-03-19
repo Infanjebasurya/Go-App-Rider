@@ -17,11 +17,13 @@ class ApiConfig {
     defaultValue: '',
   );
 
-  // Local dev base URL (only used in debug when MOCK_API=false).
-  // Override via `--dart-define API_BASE_URL=...` when needed.
+  // Static ngrok URL used when no active backend is available.
+  // Replace this with the live URL when the backend is online.
+  static const String ngrokBaseUrl =
+      'https://nia-unterrestrial-remy.ngrok-free.dev';
+
   static const String manualBaseUrl = 'http://localhost:3000';
-  static const String developmentBaseUrl = 'https://api.dev.goappdriver.com';
-  //static const String uatBaseUrl = 'https://api.uat.goappdriver.com';
+  static const String developmentBaseUrl = ngrokBaseUrl;
   static const String productionBaseUrl = 'https://api.goappdriver.com';
 
   static AppEnvironment get environment {
@@ -45,7 +47,8 @@ class ApiConfig {
       return _normalizeLoopback(override);
     }
 
-    // Avoid forcing localhost when running in mock mode (enabled by default).
+    // In debug mode with mock API disabled, use manualBaseUrl if set.
+    // Falls back to ngrokBaseUrl via developmentBaseUrl otherwise.
     final String manual = manualBaseUrl.trim();
     if (kDebugMode && !Env.mockApi && manual.isNotEmpty) {
       return _normalizeLoopback(manual);
@@ -55,9 +58,8 @@ class ApiConfig {
       case AppEnvironment.production:
         return productionBaseUrl;
       case AppEnvironment.uat:
-      //  return uatBaseUrl;
       case AppEnvironment.development:
-        return developmentBaseUrl;
+        return developmentBaseUrl; // Points to ngrokBaseUrl
     }
   }
 
