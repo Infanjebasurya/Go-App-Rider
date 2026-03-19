@@ -43,6 +43,7 @@ import 'package:goapp/features/documents/presentation/cubit/document_upload_cubi
 import 'package:goapp/features/documents/presentation/services/document_upload_file_service.dart';
 import 'package:goapp/features/documents/data/datasources/driving_license_upload_remote_data_source.dart';
 import 'package:goapp/features/documents/data/datasources/document_details_remote_data_source.dart';
+import 'package:goapp/features/documents/data/datasources/documents_list_remote_data_source.dart';
 import 'package:goapp/features/documents/data/datasources/profile_image_upload_remote_data_source.dart';
 import 'package:goapp/features/documents/data/datasources/vehicle_rc_upload_remote_data_source.dart';
 import 'package:goapp/features/documents/aadhaar_upload/data/repositories/aadhaar_upload_repository_impl.dart';
@@ -437,6 +438,9 @@ void _registerDocuments() {
     ..registerLazySingleton<DocumentDetailsRemoteDataSource>(
       () => DocumentDetailsRemoteDataSourceImpl(),
     )
+    ..registerLazySingleton<DocumentsListRemoteDataSource>(
+      () => DocumentsListRemoteDataSourceImpl(),
+    )
     ..registerLazySingleton<DrivingLicenseUploadRemoteDataSource>(
       () => DrivingLicenseUploadRemoteDataSourceImpl(),
     )
@@ -497,7 +501,9 @@ void _registerDocuments() {
         filePickerService: sl<FilePickerService>(),
       ),
     )
-    ..registerFactory<DocumentsCubit>(() => DocumentsCubit())
+    ..registerFactory<DocumentsCubit>(
+      () => DocumentsCubit(remoteDataSource: sl<DocumentsListRemoteDataSource>()),
+    )
     ..registerLazySingleton<SubmitAllDocumentsRemoteDataSource>(
       () => SubmitAllDocumentsRemoteDataSourceImpl(),
     )

@@ -31,15 +31,6 @@ class _DocumentsView extends StatefulWidget {
 
 class _DocumentsViewState extends State<_DocumentsView> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<DocumentsCubit>().refresh();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -109,12 +100,16 @@ class _DocumentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => DocumentDetailScreen(document: document),
-        ),
-      ),
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentDetailScreen(document: document),
+          ),
+        );
+        if (!context.mounted) return;
+        context.read<DocumentsCubit>().refresh();
+      },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.white,
@@ -255,11 +250,11 @@ class _StatusBadge extends StatelessWidget {
       case DocumentStatus.verified:
         return 'VERIFIED';
       case DocumentStatus.pending:
-        return 'PENDING';
+        return 'VERIFIED';
       case DocumentStatus.rejected:
         return 'REJECTED';
       case DocumentStatus.notUploaded:
-        return 'UPLOAD';
+        return 'UPLOAD REQUIRED';
     }
   }
 
