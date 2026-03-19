@@ -10,6 +10,8 @@ abstract interface class DrivingLicenseUploadRemoteDataSource {
   Future<UploadDrivingLicenseResponseModel> upload({
     required String driverId,
     required String filePath,
+    String? fileFrontPath,
+    String? fileBackPath,
     required String dlNumber,
     String? expiryDate,
   });
@@ -42,6 +44,8 @@ class DrivingLicenseUploadRemoteDataSourceImpl
   Future<UploadDrivingLicenseResponseModel> upload({
     required String driverId,
     required String filePath,
+    String? fileFrontPath,
+    String? fileBackPath,
     required String dlNumber,
     String? expiryDate,
   }) async {
@@ -53,6 +57,8 @@ class DrivingLicenseUploadRemoteDataSourceImpl
     if (trimmedFilePath.isEmpty) {
       throw Exception('Please select a driving license image.');
     }
+    final String trimmedFrontPath = (fileFrontPath ?? '').trim();
+    final String trimmedBackPath = (fileBackPath ?? '').trim();
     final String trimmedDlNumber = dlNumber.trim();
     if (trimmedDlNumber.isEmpty) {
       throw Exception('Driving license number is required.');
@@ -66,6 +72,17 @@ class DrivingLicenseUploadRemoteDataSourceImpl
       await Future<void>.delayed(const Duration(milliseconds: 500));
       return const UploadDrivingLicenseResponseModel(
         success: true,
+        documentType: 'license',
+        front: DrivingLicenseSideModel(
+          id: 'dl_front_mock_001',
+          documentUrl: '/api/v1/documents/file/mock_license_front.png',
+          verificationStatus: 'pending',
+        ),
+        back: DrivingLicenseSideModel(
+          id: 'dl_back_mock_001',
+          documentUrl: '/api/v1/documents/file/mock_license_back.png',
+          verificationStatus: 'pending',
+        ),
         documentId: 'dl_doc_mock_001',
         fileUrl: '/api/v1/documents/file/mock_license.png',
         status: 'pending',
@@ -83,6 +100,20 @@ class DrivingLicenseUploadRemoteDataSourceImpl
       'dl_number': trimmedDlNumber,
       'driver_id': trimmedDriverId,
     };
+
+    // Backward compatible:
+    // - Older backend expects single `file` only.
+    // - New backend supports `file_front` + `file_back` (recommended when present).
+    if (trimmedFrontPath.isNotEmpty || trimmedBackPath.isNotEmpty) {
+      if (trimmedFrontPath.isEmpty) {
+        throw Exception('Please select the driving license front image.');
+      }
+      if (trimmedBackPath.isEmpty) {
+        throw Exception('Please select the driving license back image.');
+      }
+      bodyMap['file_front'] = await MultipartFile.fromFile(trimmedFrontPath);
+      bodyMap['file_back'] = await MultipartFile.fromFile(trimmedBackPath);
+    }
     if (trimmedExpiry.isNotEmpty) {
       bodyMap['expiry_date'] = trimmedExpiry;
     }

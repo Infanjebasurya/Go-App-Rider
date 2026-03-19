@@ -9,6 +9,8 @@ import 'package:goapp/features/documents/data/models/document_upload_api_respons
 abstract interface class VehicleRcUploadRemoteDataSource {
   Future<UploadVehicleRcResponseModel> upload({
     required String filePath,
+    String? fileFrontPath,
+    String? fileBackPath,
     required String rcNumber,
   });
 }
@@ -39,12 +41,16 @@ class VehicleRcUploadRemoteDataSourceImpl
   @override
   Future<UploadVehicleRcResponseModel> upload({
     required String filePath,
+    String? fileFrontPath,
+    String? fileBackPath,
     required String rcNumber,
   }) async {
     final String trimmedPath = filePath.trim();
     if (trimmedPath.isEmpty) {
       throw Exception('Please select a vehicle RC image.');
     }
+    final String trimmedFrontPath = (fileFrontPath ?? '').trim();
+    final String trimmedBackPath = (fileBackPath ?? '').trim();
     final String trimmedRc = rcNumber.trim();
     if (trimmedRc.isEmpty) {
       throw Exception('Vehicle RC number is required.');
@@ -57,6 +63,17 @@ class VehicleRcUploadRemoteDataSourceImpl
       await Future<void>.delayed(const Duration(milliseconds: 500));
       return const UploadVehicleRcResponseModel(
         success: true,
+        documentType: 'rc_book',
+        front: VehicleRcSideModel(
+          id: 'rc_front_mock_001',
+          documentUrl: '/api/v1/documents/file/mock_rc_front.png',
+          verificationStatus: 'pending',
+        ),
+        back: VehicleRcSideModel(
+          id: 'rc_back_mock_001',
+          documentUrl: '/api/v1/documents/file/mock_rc_back.png',
+          verificationStatus: 'pending',
+        ),
         documentId: 'rc_doc_mock_001',
         fileUrl: '/api/v1/documents/file/mock_rc.png',
         status: 'pending',
@@ -69,10 +86,26 @@ class VehicleRcUploadRemoteDataSourceImpl
     }
 
     final String tokenType = (AuthTokenStore.tokenType() ?? 'Bearer').trim();
-    final FormData body = FormData.fromMap(<String, dynamic>{
+    final Map<String, dynamic> bodyMap = <String, dynamic>{
       'file': await MultipartFile.fromFile(trimmedPath),
       'rc_number': trimmedRc,
-    });
+    };
+
+    // Backward compatible:
+    // - Older backend expects single `file` only.
+    // - New backend supports `file_front` + `file_back` (recommended when present).
+    if (trimmedFrontPath.isNotEmpty || trimmedBackPath.isNotEmpty) {
+      if (trimmedFrontPath.isEmpty) {
+        throw Exception('Please select the vehicle RC front image.');
+      }
+      if (trimmedBackPath.isEmpty) {
+        throw Exception('Please select the vehicle RC back image.');
+      }
+      bodyMap['file_front'] = await MultipartFile.fromFile(trimmedFrontPath);
+      bodyMap['file_back'] = await MultipartFile.fromFile(trimmedBackPath);
+    }
+
+    final FormData body = FormData.fromMap(bodyMap);
 
     final Options options = Options(
       headers: <String, String>{

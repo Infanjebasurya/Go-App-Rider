@@ -332,6 +332,8 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     final StepData step = state.currentDocStep;
     final String driverId = (DriverIdStore.driverId() ?? '').trim();
     final String? filePath = step.frontPath;
+    final String? frontPath = step.frontPath;
+    final String? backPath = step.backPath;
     final String dlNumber = DocumentNumberRules.normalize(
       DocumentStep.drivingLicense,
       step.documentNumber,
@@ -341,6 +343,8 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     final response = await _drivingLicenseUploadRemoteDataSource.upload(
       driverId: driverId,
       filePath: filePath ?? '',
+      fileFrontPath: frontPath,
+      fileBackPath: backPath,
       dlNumber: dlNumber,
       expiryDate: expiryDate.isEmpty ? null : expiryDate,
     );
@@ -375,6 +379,8 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
   Future<void> _uploadVehicleRcAndContinue({required bool advance}) async {
     final StepData step = state.currentDocStep;
     final String? filePath = step.frontPath;
+    final String? frontPath = step.frontPath;
+    final String? backPath = step.backPath;
     final String rcNumber = DocumentNumberRules.normalize(
       DocumentStep.vehicleRC,
       step.documentNumber,
@@ -382,6 +388,8 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
 
     final response = await _vehicleRcUploadRemoteDataSource.upload(
       filePath: filePath ?? '',
+      fileFrontPath: frontPath,
+      fileBackPath: backPath,
       rcNumber: rcNumber,
     );
 

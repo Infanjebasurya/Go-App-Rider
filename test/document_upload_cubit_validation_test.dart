@@ -30,11 +30,24 @@ class _FakeDrivingLicenseUploadRemoteDataSource
   Future<UploadDrivingLicenseResponseModel> upload({
     required String driverId,
     required String filePath,
+    String? fileFrontPath,
+    String? fileBackPath,
     required String dlNumber,
     String? expiryDate,
   }) async {
     return const UploadDrivingLicenseResponseModel(
       success: true,
+      documentType: 'license',
+      front: DrivingLicenseSideModel(
+        id: 'dl_front_test_001',
+        documentUrl: '/api/v1/documents/file/test_license_front.png',
+        verificationStatus: 'pending',
+      ),
+      back: DrivingLicenseSideModel(
+        id: 'dl_back_test_001',
+        documentUrl: '/api/v1/documents/file/test_license_back.png',
+        verificationStatus: 'pending',
+      ),
       documentId: 'dl_doc_test_001',
       fileUrl: '/api/v1/documents/file/test_license.png',
       status: 'pending',
@@ -66,10 +79,23 @@ class _FakeVehicleRcUploadRemoteDataSource
   @override
   Future<UploadVehicleRcResponseModel> upload({
     required String filePath,
+    String? fileFrontPath,
+    String? fileBackPath,
     required String rcNumber,
   }) async {
     return const UploadVehicleRcResponseModel(
       success: true,
+      documentType: 'rc_book',
+      front: VehicleRcSideModel(
+        id: 'rc_front_test_001',
+        documentUrl: '/api/v1/documents/file/test_rc_front.png',
+        verificationStatus: 'pending',
+      ),
+      back: VehicleRcSideModel(
+        id: 'rc_back_test_001',
+        documentUrl: '/api/v1/documents/file/test_rc_back.png',
+        verificationStatus: 'pending',
+      ),
       documentId: 'rc_doc_test_001',
       fileUrl: '/api/v1/documents/file/test_rc.png',
       status: 'pending',
