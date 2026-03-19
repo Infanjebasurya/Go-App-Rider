@@ -7,6 +7,7 @@ import 'package:goapp/core/di/injection.dart';
 import 'package:goapp/core/widgets/shadow_button.dart';
 import 'package:goapp/features/auth/presentation/theme/app_colors.dart';
 import 'package:goapp/features/auth/presentation/widgets/appbar.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/documents/pan_upload/presentation/cubit/pan_upload_cubit.dart';
 import 'package:goapp/features/documents/pan_upload/presentation/cubit/pan_upload_state.dart';
 import 'package:goapp/features/documents/presentation/widgets/doc_number_field.dart';
@@ -52,14 +53,10 @@ class _PanUploadViewState extends State<_PanUploadView> {
           listener: (context, state) {
             if (state.errorMessage != null &&
                 state.errorMessage!.trim().isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.errorMessage!.trim())),
-              );
+              SnackBarUtils.showError(context, state.errorMessage!.trim());
             }
             if (state.response != null && state.response!.success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('PAN Uploaded Successfully')),
-              );
+              SnackBarUtils.show(context, 'PAN Uploaded Successfully');
             }
           },
           builder: (context, state) {

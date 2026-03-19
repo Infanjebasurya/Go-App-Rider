@@ -6,6 +6,9 @@ import 'package:goapp/core/service/file_picker_service.dart';
 import 'package:goapp/core/service/image_picker_service.dart';
 import 'package:goapp/core/storage/driver_id_store.dart';
 import 'package:goapp/core/storage/text_field_store.dart';
+import 'package:goapp/features/documents/data/datasources/bank_details_service.dart';
+import 'package:goapp/features/documents/data/repositories/bank_details_repository.dart';
+import 'package:goapp/features/documents/data/repositories/bank_details_repository_impl.dart';
 import 'package:goapp/features/documents/data/datasources/driving_license_upload_remote_data_source.dart';
 import 'package:goapp/features/documents/data/datasources/profile_image_upload_remote_data_source.dart';
 import 'package:goapp/features/documents/data/datasources/vehicle_rc_upload_remote_data_source.dart';
@@ -49,6 +52,7 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     required ProfileImageUploadRemoteDataSource
     profileImageUploadRemoteDataSource,
     required VehicleRcUploadRemoteDataSource vehicleRcUploadRemoteDataSource,
+    BankDetailsRepository? bankDetailsRepository,
   }) : _imagePickerService = imagePickerService,
        _filePickerService = filePickerService,
        _fileService = fileService,
@@ -56,6 +60,11 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
            drivingLicenseUploadRemoteDataSource,
        _profileImageUploadRemoteDataSource = profileImageUploadRemoteDataSource,
        _vehicleRcUploadRemoteDataSource = vehicleRcUploadRemoteDataSource,
+       _bankDetailsRepository =
+           bankDetailsRepository ??
+           BankDetailsRepositoryImpl(
+             service: BankDetailsServiceImpl(mode: DataMode.mock),
+           ),
        _isTest = _isFlutterTestEnvironment(),
        super(
          DocumentUploadState.initial().copyWith(
@@ -72,6 +81,7 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
   _drivingLicenseUploadRemoteDataSource;
   final ProfileImageUploadRemoteDataSource _profileImageUploadRemoteDataSource;
   final VehicleRcUploadRemoteDataSource _vehicleRcUploadRemoteDataSource;
+  final BankDetailsRepository _bankDetailsRepository;
   final bool _isTest;
   bool _isPicking = false;
 
@@ -288,7 +298,11 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
   }
 
   Future<void> saveAndNext() {
-    return _saveAndNext(this);
+    return _saveAndNext(this, advance: true);
+  }
+
+  Future<void> saveAndUploadOnly() {
+    return _saveAndNext(this, advance: false);
   }
 
   bool validateCurrentDocumentStep() {
@@ -324,10 +338,12 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     return '$y-$m-$d';
   }
 
-  Future<void> _uploadDrivingLicenseAndContinue() async {
+  Future<void> _uploadDrivingLicenseAndContinue({required bool advance}) async {
     final StepData step = state.currentDocStep;
     final String driverId = (DriverIdStore.driverId() ?? '').trim();
     final String? filePath = step.frontPath;
+    final String? frontPath = step.frontPath;
+    final String? backPath = step.backPath;
     final String dlNumber = DocumentNumberRules.normalize(
       DocumentStep.drivingLicense,
       step.documentNumber,
@@ -337,8 +353,10 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     final response = await _drivingLicenseUploadRemoteDataSource.upload(
       driverId: driverId,
       filePath: filePath ?? '',
+      fileFrontPath: frontPath,
+      fileBackPath: backPath,
       dlNumber: dlNumber,
-      expiryDate: expiryDate,
+      expiryDate: expiryDate.isEmpty ? null : expiryDate,
     );
 
     if (response.documentId != null && response.documentId!.trim().isNotEmpty) {
@@ -361,14 +379,18 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     _emitState(
       state.copyWith(
         isSubmitting: false,
-        currentStepIndex: state.currentStepIndex + 1,
+        currentStepIndex: advance
+            ? state.currentStepIndex + 1
+            : state.currentStepIndex,
       ),
     );
   }
 
-  Future<void> _uploadVehicleRcAndContinue() async {
+  Future<void> _uploadVehicleRcAndContinue({required bool advance}) async {
     final StepData step = state.currentDocStep;
     final String? filePath = step.frontPath;
+    final String? frontPath = step.frontPath;
+    final String? backPath = step.backPath;
     final String rcNumber = DocumentNumberRules.normalize(
       DocumentStep.vehicleRC,
       step.documentNumber,
@@ -376,6 +398,8 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
 
     final response = await _vehicleRcUploadRemoteDataSource.upload(
       filePath: filePath ?? '',
+      fileFrontPath: frontPath,
+      fileBackPath: backPath,
       rcNumber: rcNumber,
     );
 
@@ -398,12 +422,14 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     _emitState(
       state.copyWith(
         isSubmitting: false,
-        currentStepIndex: state.currentStepIndex + 1,
+        currentStepIndex: advance
+            ? state.currentStepIndex + 1
+            : state.currentStepIndex,
       ),
     );
   }
 
-  Future<void> _uploadProfileImageAndContinue() async {
+  Future<void> _uploadProfileImageAndContinue({required bool advance}) async {
     final StepData step = state.currentDocStep;
     final String? filePath = step.frontPath;
 
@@ -413,7 +439,9 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
           statusMessage: 'Profile image uploaded successfully.',
           statusIsError: false,
           isSubmitting: false,
-          currentStepIndex: state.currentStepIndex + 1,
+          currentStepIndex: advance
+              ? state.currentStepIndex + 1
+              : state.currentStepIndex,
         ),
       );
       return;
@@ -439,7 +467,9 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     _emitState(
       state.copyWith(
         isSubmitting: false,
-        currentStepIndex: state.currentStepIndex + 1,
+        currentStepIndex: advance
+            ? state.currentStepIndex + 1
+            : state.currentStepIndex,
       ),
     );
   }

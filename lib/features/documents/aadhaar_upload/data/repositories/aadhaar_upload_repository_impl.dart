@@ -13,17 +13,25 @@ class AadhaarUploadRepositoryImpl implements AadhaarUploadRepository {
   static final RegExp _aadhaarRegex = RegExp(r'^\d{12}$');
 
   @override
-  Future<DocumentUploadResponse> uploadAadhaar({
-    required File file,
+  Future<AadhaarUploadResponse> uploadAadhaar({
+    required File frontFile,
+    required File backFile,
     required String aadhaarNumber,
   }) async {
     final normalized = aadhaarNumber.trim();
     if (!_aadhaarRegex.hasMatch(normalized)) {
       throw FormatException('Aadhaar number must be 12 digits.');
     }
-    if (!await file.exists()) {
-      throw Exception('Selected file not found.');
+    if (!await frontFile.exists()) {
+      throw Exception('Front image not found.');
     }
-    return _service.uploadAadhaar(file: file, aadhaarNumber: normalized);
+    if (!await backFile.exists()) {
+      throw Exception('Back image not found.');
+    }
+    return _service.uploadAadhaar(
+      frontFile: frontFile,
+      backFile: backFile,
+      aadhaarNumber: normalized,
+    );
   }
 }

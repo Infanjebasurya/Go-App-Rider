@@ -7,7 +7,7 @@ class VerificationState extends Equatable {
     required this.documents,
     this.isSubmitting = false,
     this.isSubmitted = false,
-    this.declarationAccepted = false,
+    this.declarationAccepted = true,
     this.errorMessage,
     this.isProfileImageUploaded = false,
     this.submissionId,
@@ -44,7 +44,7 @@ class VerificationState extends Equatable {
         ),
       ],
       isProfileImageUploaded: false,
-      declarationAccepted: false,
+      declarationAccepted: true,
     );
   }
 
@@ -62,9 +62,7 @@ class VerificationState extends Equatable {
   int get progressPercent => (progressPercentage * 100).round();
 
   bool get canSubmit =>
-      declarationAccepted &&
-      isProfileImageUploaded &&
-      completedCount == documents.length;
+      isProfileImageUploaded && completedCount == documents.length;
 
   VerificationState copyWith({
     List<Document>? documents,

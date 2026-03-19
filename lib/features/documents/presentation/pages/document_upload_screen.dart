@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:goapp/core/storage/text_field_store.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/auth/presentation/theme/app_colors.dart';
 import 'package:goapp/features/auth/presentation/widgets/appbar.dart';
-import 'package:goapp/features/document_verify/presentation/pages/verification_screen.dart';
+import 'package:goapp/features/documents/presentation/pages/verification_submitted_screen.dart';
 import 'package:goapp/core/di/injection.dart';
 
 import '../cubit/document_upload_cubit.dart';
@@ -71,14 +75,30 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
       listener: (context, state) {
         final message = state.statusMessage;
         if (message != null && message.trim().isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: state.statusIsError
-                  ? const Color(0xFFB91C1C)
-                  : AppColors.emerald,
-            ),
-          );
+          final bool isSuccess = !state.statusIsError;
+          final DocumentStep messageStep = isSuccess
+              ? _successMessageStep(state)
+              : _errorMessageStep(state);
+
+          final bool canSuppress =
+              isSuccess &&
+              (messageStep == DocumentStep.profilePhoto ||
+                  messageStep == DocumentStep.drivingLicense ||
+                  messageStep == DocumentStep.vehicleRC);
+
+          final bool shouldShow = state.statusIsError
+              ? true
+              : (canSuppress
+                    ? _shouldShowSuccessSnackbar(messageStep, state)
+                    : true);
+
+          if (shouldShow) {
+            if (state.statusIsError) {
+              SnackBarUtils.showError(context, message);
+            } else {
+              SnackBarUtils.show(context, message);
+            }
+          }
           context.read<DocumentUploadCubit>().clearStatusMessage();
         }
         if (state.isAllDone && !_navigatedToSuccess) {
@@ -174,7 +194,7 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
 
   void _navigateToSuccess(BuildContext context) {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const VerificationScreen()),
+      MaterialPageRoute(builder: (_) => const VerificationSubmittedScreen()),
     );
   }
 
@@ -185,7 +205,56 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
       return;
     }
     navigator.pushReplacement(
-      MaterialPageRoute(builder: (_) => const VerificationScreen()),
+      MaterialPageRoute(builder: (_) => const VerificationSubmittedScreen()),
     );
+  }
+
+  DocumentStep _successMessageStep(DocumentUploadState state) {
+    final int idx = state.currentStepIndex - 1;
+    if (idx >= 0 && idx < state.steps.length) {
+      return state.steps[idx].step;
+    }
+    return state.steps.isNotEmpty
+        ? state.steps.last.step
+        : DocumentStep.profilePhoto;
+  }
+
+  DocumentStep _errorMessageStep(DocumentUploadState state) {
+    if (state.isCurrentStepBank) {
+      return state.steps.isNotEmpty
+          ? state.steps.last.step
+          : DocumentStep.profilePhoto;
+    }
+    return state.currentDocStep.step;
+  }
+
+  StepData? _stepDataFor(DocumentUploadState state, DocumentStep step) {
+    for (final s in state.steps) {
+      if (s.step == step) return s;
+    }
+    return null;
+  }
+
+  bool _shouldShowSuccessSnackbar(
+    DocumentStep step,
+    DocumentUploadState state,
+  ) {
+    final StepData? stepData = _stepDataFor(state, step);
+    if (stepData == null) return true;
+
+    final String key = 'snackbar_once.${step.name}';
+
+    final String signature = switch (step) {
+      DocumentStep.profilePhoto => 'front:${stepData.frontPath ?? ''}',
+      DocumentStep.drivingLicense || DocumentStep.vehicleRC =>
+        'front:${stepData.frontPath ?? ''}|back:${stepData.backPath ?? ''}|num:${stepData.documentNumber.trim()}',
+      _ => '',
+    };
+
+    if (signature.isEmpty) return true;
+    final String? previous = TextFieldStore.read(key);
+    if (previous == signature) return false;
+    unawaited(TextFieldStore.write(key, signature));
+    return true;
   }
 }

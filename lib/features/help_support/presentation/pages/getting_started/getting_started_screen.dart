@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:goapp/core/theme/app_colors.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/features/help_support/presentation/pages/getting_started/how_to_complete_an_order_screen.dart';
 import 'package:goapp/features/help_support/presentation/pages/getting_started/how_to_earn_more_screen.dart';
 import 'package:goapp/features/help_support/presentation/pages/getting_started/how_to_transfer_money_to_bank_account_screen.dart';
@@ -15,9 +16,7 @@ class GettingStartedScreen extends StatelessWidget {
     final items = _GettingStartedItem.items;
 
     void openComingSoon(String title) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$title coming soon')));
+      SnackBarUtils.show(context, '$title coming soon');
     }
 
     return Scaffold(

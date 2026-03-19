@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/features/auth/presentation/theme/app_colors.dart';
 import 'package:goapp/features/auth/presentation/widgets/appbar.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 import 'package:goapp/core/storage/registration_progress_store.dart';
 import 'package:goapp/features/city_vehicle/city_selection/presentation/model/city_model.dart';
 import 'package:goapp/features/city_vehicle/vehicle_details/presentation/pages/vehicle_details_screen.dart';
@@ -70,9 +71,7 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
     if (error != null) {
       messenger
         ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(content: Text(error), duration: const Duration(seconds: 2)),
-        );
+        ..showSnackBar(SnackBarUtils.buildError(error));
       return;
     }
 
@@ -80,8 +79,8 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
       messenger.clearSnackBars();
       await messenger
           .showSnackBar(
-            SnackBar(
-              content: Text(message.trim()),
+            SnackBarUtils.build(
+              message.trim(),
               duration: const Duration(milliseconds: 900),
             ),
           )

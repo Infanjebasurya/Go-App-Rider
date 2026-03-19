@@ -6,6 +6,7 @@ import 'package:goapp/features/about/presentation/cubit/about_state.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
 import 'package:goapp/core/di/injection.dart';
 import 'package:goapp/core/service/url_launcher_service.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -128,9 +129,7 @@ class _AboutMenuList extends StatelessWidget {
       _termsUri.toString(),
     );
     if (!context.mounted || launched) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Unable to open link')));
+    SnackBarUtils.showError(context, 'Unable to open link');
   }
 
   void _openExternalAbout(BuildContext context) {
@@ -138,9 +137,7 @@ class _AboutMenuList extends StatelessWidget {
       launched,
     ) {
       if (!launched && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Unable to open link')));
+        SnackBarUtils.showError(context, 'Unable to open link');
       }
     });
   }

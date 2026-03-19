@@ -2,8 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:goapp/core/di/injection.dart';
 import 'package:goapp/features/document_verify/presentation/model/document_progress_store.dart';
+import 'package:goapp/features/documents/data/datasources/documents_list_remote_data_source.dart';
+import 'package:goapp/features/documents/data/models/documents_list_models.dart';
 import 'package:goapp/features/documents/presentation/cubit/documents_cubit.dart';
 import 'package:goapp/features/documents/presentation/pages/documents_screen.dart';
+
+class _FakeDocumentsListRemoteDataSource
+    implements DocumentsListRemoteDataSource {
+  @override
+  Future<DocumentsListResponseModel> fetchAll() async {
+    return const DocumentsListResponseModel(success: true, documents: []);
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +24,11 @@ void main() {
     if (sl.isRegistered<DocumentsCubit>()) {
       sl.unregister<DocumentsCubit>();
     }
-    sl.registerFactory<DocumentsCubit>(() => DocumentsCubit());
+    sl.registerFactory<DocumentsCubit>(
+      () => DocumentsCubit(
+        remoteDataSource: _FakeDocumentsListRemoteDataSource(),
+      ),
+    );
   });
 
   tearDown(() {

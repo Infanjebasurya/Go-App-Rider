@@ -49,10 +49,7 @@ bool _validateDocStep(DocumentUploadCubit cubit) {
     return false;
   }
 
-  final bool requiresBackSide =
-      step.step != DocumentStep.identityPan &&
-      step.step != DocumentStep.drivingLicense &&
-      step.step != DocumentStep.vehicleRC;
+  final bool requiresBackSide = step.requiresBackSide;
   if (!step.frontCaptured || (requiresBackSide && !step.backCaptured)) {
     final updated = step.copyWith(
       numberError: requiresBackSide
@@ -91,25 +88,6 @@ bool _validateDocStep(DocumentUploadCubit cubit) {
       false,
     );
     return false;
-  }
-
-  if (step.step == DocumentStep.drivingLicense) {
-    final String expiry = step.expiryDate.trim();
-    if (expiry.isEmpty) {
-      final updated = step.copyWith(expiryDateError: 'Expiry date is required');
-      cubit._emitState(cubit.state.copyWithDocStep(updated));
-      DocumentProgressStore.setCompleted(DocumentType.drivingLicense, false);
-      return false;
-    }
-    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(expiry) ||
-        DateTime.tryParse(expiry) == null) {
-      final updated = step.copyWith(
-        expiryDateError: 'Enter expiry date as YYYY-MM-DD',
-      );
-      cubit._emitState(cubit.state.copyWithDocStep(updated));
-      DocumentProgressStore.setCompleted(DocumentType.drivingLicense, false);
-      return false;
-    }
   }
 
   if (normalized != step.documentNumber) {
@@ -156,6 +134,10 @@ bool _validateBankStep(DocumentUploadCubit cubit) {
   );
   bool valid = true;
 
+  if (b.accountHolderName.trim().isEmpty) {
+    updated = updated.copyWith(nameError: 'Account holder name is required');
+    valid = false;
+  }
   if (b.accountHolderName.trim().isNotEmpty &&
       !RegExp(
         r'^[A-Z ]+$',
@@ -223,7 +205,10 @@ bool _validateBankStep(DocumentUploadCubit cubit) {
   return valid;
 }
 
-Future<void> _saveAndNext(DocumentUploadCubit cubit) async {
+Future<void> _saveAndNext(
+  DocumentUploadCubit cubit, {
+  required bool advance,
+}) async {
   if (cubit.state.isSubmitting ||
       cubit._isPicking ||
       cubit.state.isProfileImageProcessing) {
@@ -231,15 +216,47 @@ Future<void> _saveAndNext(DocumentUploadCubit cubit) async {
   }
   if (cubit.state.isCurrentStepBank) {
     if (!_validateBankStep(cubit)) return;
-    DocumentProgressStore.setCompleted(
-      DocumentType.bankDetails,
-      cubit.state.bankData.isComplete,
-    );
-    cubit._emitState(cubit.state.copyWith(isSubmitting: true));
-    await Future.delayed(const Duration(seconds: 2));
     cubit._emitState(
-      cubit.state.copyWith(isSubmitting: false, isAllDone: true),
+      cubit.state.copyWith(
+        isSubmitting: true,
+        clearStatusMessage: true,
+        statusIsError: false,
+      ),
     );
+
+    try {
+      final b = cubit.state.bankData;
+      final path = (b.bankDocumentPath ?? '').trim();
+      await cubit._bankDetailsRepository.addBankDetails(
+        accountHolderName: b.accountHolderName,
+        bankName: b.bankName,
+        accountNumber: b.accountNumber,
+        confirmAccountNumber: b.confirmAccountNumber,
+        ifscCode: b.ifscCode,
+        type: 'savings',
+        bankBook: File(path),
+      );
+
+      DocumentProgressStore.setCompleted(DocumentType.bankDetails, true);
+      cubit._emitState(
+        cubit.state.copyWith(
+          isSubmitting: false,
+          isAllDone: true,
+          statusMessage: 'Bank details saved successfully.',
+          statusIsError: false,
+        ),
+      );
+    } catch (e) {
+      DocumentProgressStore.setCompleted(DocumentType.bankDetails, false);
+      final msg = e.toString().replaceFirst('Exception: ', '').trim();
+      cubit._emitState(
+        cubit.state.copyWith(
+          isSubmitting: false,
+          statusMessage: msg.isEmpty ? 'Failed to save bank details.' : msg,
+          statusIsError: true,
+        ),
+      );
+    }
   } else {
     cubit._emitState(cubit.state.copyWith(isSubmitting: true));
     if (!_validateDocStep(cubit)) {
@@ -249,7 +266,7 @@ Future<void> _saveAndNext(DocumentUploadCubit cubit) async {
 
     if (cubit.state.currentDocStep.step == DocumentStep.profilePhoto) {
       try {
-        await cubit._uploadProfileImageAndContinue();
+        await cubit._uploadProfileImageAndContinue(advance: advance);
       } catch (e) {
         cubit._emitState(
           cubit.state.copyWith(
@@ -264,7 +281,7 @@ Future<void> _saveAndNext(DocumentUploadCubit cubit) async {
 
     if (cubit.state.currentDocStep.step == DocumentStep.drivingLicense) {
       try {
-        await cubit._uploadDrivingLicenseAndContinue();
+        await cubit._uploadDrivingLicenseAndContinue(advance: advance);
       } catch (e) {
         DocumentProgressStore.setCompleted(DocumentType.drivingLicense, false);
         cubit._emitState(
@@ -280,7 +297,7 @@ Future<void> _saveAndNext(DocumentUploadCubit cubit) async {
 
     if (cubit.state.currentDocStep.step == DocumentStep.vehicleRC) {
       try {
-        await cubit._uploadVehicleRcAndContinue();
+        await cubit._uploadVehicleRcAndContinue(advance: advance);
       } catch (e) {
         DocumentProgressStore.setCompleted(DocumentType.vehicleRC, false);
         cubit._emitState(
@@ -294,10 +311,21 @@ Future<void> _saveAndNext(DocumentUploadCubit cubit) async {
       return;
     }
 
+    final DocumentStep stepType = cubit.state.currentDocStep.step;
+    final String? successMessage = switch (stepType) {
+      DocumentStep.identityAadhaar => 'Aadhaar uploaded successfully.',
+      DocumentStep.identityPan => 'PAN uploaded successfully.',
+      _ => null,
+    };
+
     cubit._emitState(
       cubit.state.copyWith(
         isSubmitting: false,
-        currentStepIndex: cubit.state.currentStepIndex + 1,
+        currentStepIndex: advance
+            ? cubit.state.currentStepIndex + 1
+            : cubit.state.currentStepIndex,
+        statusMessage: successMessage,
+        statusIsError: false,
       ),
     );
   }

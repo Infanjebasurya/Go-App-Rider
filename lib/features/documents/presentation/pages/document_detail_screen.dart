@@ -3,16 +3,14 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:goapp/core/config/api_config.dart';
-import 'package:goapp/core/di/injection.dart';
+import 'package:goapp/core/storage/auth_token_store.dart';
 import 'package:goapp/core/theme/app_colors.dart';
 import 'package:goapp/features/document_verify/presentation/model/document_model.dart'
     show DocumentType;
 import 'package:goapp/features/document_verify/presentation/model/document_progress_store.dart';
-import 'package:goapp/features/documents/data/datasources/document_details_remote_data_source.dart';
-import 'package:goapp/features/documents/data/models/document_details_models.dart';
 import 'package:goapp/features/documents/presentation/model/document_model.dart';
 import 'package:goapp/core/widgets/app_app_bar.dart';
-import 'package:goapp/features/documents/presentation/pages/document_upload_screen.dart';
+import 'package:goapp/features/documents/presentation/pages/driving_license_upload_screen.dart';
 import 'package:goapp/features/documents/presentation/pages/vehicle_rc_upload_screen.dart';
 
 class DocumentDetailScreen extends StatefulWidget {
@@ -25,12 +23,6 @@ class DocumentDetailScreen extends StatefulWidget {
 }
 
 class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
-  late final DocumentDetailsRemoteDataSource _detailsApi;
-
-  bool _isLoading = false;
-  String? _errorMessage;
-  DrivingLicenseDetailsModel? _dlDetails;
-  VehicleRcDetailsModel? _rcDetails;
   bool _isEmpty = false;
 
   bool get _isDrivingLicense => widget.document.iconAsset == 'driving_license';
@@ -39,141 +31,23 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _detailsApi = sl<DocumentDetailsRemoteDataSource>();
-    if (_isDrivingLicense || _isVehicleRc) {
-      _fetch();
+    // Static (local) reflection: show whatever user uploaded immediately,
+    // without depending on the details GET APIs.
+    if (_isDrivingLicense) {
+      _isEmpty = !_hasLocalOrUploaded(DocumentType.drivingLicense);
+    } else if (_isVehicleRc) {
+      _isEmpty = !_hasLocalOrUploaded(DocumentType.vehicleRC);
     }
   }
 
-  Future<void> _fetch() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _isEmpty = false;
-    });
-
-    try {
-      if (_isDrivingLicense) {
-        final DrivingLicenseDetailsModel? data = await _detailsApi
-            .getDrivingLicense();
-        if (!mounted) return;
-        if (data == null) {
-          setState(() {
-            _dlDetails = null;
-            _isEmpty = true;
-            _isLoading = false;
-          });
-          return;
-        }
-        _persistDlToStore(data);
-        setState(() {
-          _dlDetails = data;
-          _isLoading = false;
-        });
-        return;
-      }
-
-      if (_isVehicleRc) {
-        final VehicleRcDetailsModel? data = await _detailsApi.getVehicleRc();
-        if (!mounted) return;
-        if (data == null) {
-          setState(() {
-            _rcDetails = null;
-            _isEmpty = true;
-            _isLoading = false;
-          });
-          return;
-        }
-        _persistRcToStore(data);
-        setState(() {
-          _rcDetails = data;
-          _isLoading = false;
-        });
-        return;
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.toString().replaceFirst('Exception: ', '').trim();
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _persistDlToStore(DrivingLicenseDetailsModel data) {
-    final String? id = data.id?.trim();
-    if (id != null && id.isNotEmpty) {
-      DocumentProgressStore.setDocumentId(DocumentType.drivingLicense, id);
-    }
-    final String? number = data.documentNumber?.trim();
-    if (number != null && number.isNotEmpty) {
-      DocumentProgressStore.setDocumentNumber(
-        DocumentType.drivingLicense,
-        number,
-      );
-    }
-    final String expiry = (data.expiryDateIso ?? '').trim();
-    final DateTime? parsed = DateTime.tryParse(expiry);
-    if (parsed != null) {
-      DocumentProgressStore.setExpiryDate(
-        DocumentType.drivingLicense,
-        _formatYmd(parsed.toLocal()),
-      );
-    }
-    DocumentProgressStore.setCompleted(DocumentType.drivingLicense, true);
-  }
-
-  void _persistRcToStore(VehicleRcDetailsModel data) {
-    final String? id = data.id?.trim();
-    if (id != null && id.isNotEmpty) {
-      DocumentProgressStore.setDocumentId(DocumentType.vehicleRC, id);
-    }
-    final String? number = data.rcNumber?.trim();
-    if (number != null && number.isNotEmpty) {
-      DocumentProgressStore.setDocumentNumber(DocumentType.vehicleRC, number);
-    }
-    DocumentProgressStore.setCompleted(DocumentType.vehicleRC, true);
-  }
-
-  static String _formatYmd(DateTime date) {
-    final String y = date.year.toString().padLeft(4, '0');
-    final String m = date.month.toString().padLeft(2, '0');
-    final String d = date.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
-  }
-
-  String _formatReadableDate(DateTime date) {
-    const months = <String>[
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final String dd = date.day.toString().padLeft(2, '0');
-    final String mon = months[(date.month - 1).clamp(0, 11)];
-    return '$dd $mon ${date.year}';
-  }
-
-  String _statusLabel(String? raw) {
-    final String v = (raw ?? '').trim().toLowerCase();
-    switch (v) {
-      case 'approved':
-      case 'verified':
-        return 'Verified';
-      case 'rejected':
-        return 'Rejected';
-      case 'pending':
-      default:
-        return 'Under Review';
-    }
+  bool _hasLocalOrUploaded(DocumentType type) {
+    final String front = (DocumentProgressStore.frontImagePath(type) ?? '')
+        .trim();
+    final String back = (DocumentProgressStore.backImagePath(type) ?? '')
+        .trim();
+    final String number = (DocumentProgressStore.documentNumber(type) ?? '')
+        .trim();
+    return front.isNotEmpty && back.isNotEmpty && number.isNotEmpty;
   }
 
   String _resolveDocumentUrl(String rawUrl) {
@@ -198,9 +72,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               child: _buildBody(context),
             ),
           ),
-          if (isVehicleRc && !_isLoading && !_isEmpty && _errorMessage == null)
-            const _VehicleRcBottomPrompt(),
-          if (isVehicleRc && !_isLoading && !_isEmpty && _errorMessage == null)
+          if (isVehicleRc && !_isEmpty) const _VehicleRcBottomPrompt(),
+          if (isVehicleRc && !_isEmpty)
             _VehicleRcEditButton(onPressed: _editVehicleRc),
           if (!isVehicleRc) _EncryptionFooter(),
         ],
@@ -223,17 +96,6 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
 
   Widget _buildBody(BuildContext context) {
     if (_isDrivingLicense || _isVehicleRc) {
-      if (_isLoading) {
-        return const Center(
-          child: Padding(
-            padding: EdgeInsets.only(top: 40),
-            child: CircularProgressIndicator(),
-          ),
-        );
-      }
-      if (_errorMessage != null && _errorMessage!.trim().isNotEmpty) {
-        return _ErrorState(message: _errorMessage!, onRetry: _fetch);
-      }
       if (_isEmpty) {
         return _EmptyState(
           title: _isDrivingLicense
@@ -255,34 +117,16 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     final documentNumber = _resolvedDocumentNumber();
     switch (widget.document.iconAsset) {
       case 'driving_license':
-        final String? url = _dlDetails?.documentUrl;
-        final String? number = _dlDetails?.documentNumber;
-        final String? status = _dlDetails?.verificationStatus;
-        final String? expiry = _dlDetails?.expiryDateIso;
-        final DateTime? expiryParsed = expiry == null
-            ? null
-            : DateTime.tryParse(expiry);
+        final String? preferredFront = _displayPath(frontImagePath);
+        final String? preferredBack = _displayPath(backImagePath);
         return _DrivingLicenseDetail(
-          frontImagePath: (url != null && url.trim().isNotEmpty)
-              ? _resolveDocumentUrl(url)
-              : frontImagePath,
-          backImagePath: backImagePath,
-          licenseNumber: (number != null && number.trim().isNotEmpty)
-              ? number
-              : documentNumber,
-          statusText: _statusLabel(status),
-          expiryText: expiryParsed == null
-              ? null
-              : _formatReadableDate(expiryParsed.toLocal()),
+          frontImagePath: preferredFront,
+          backImagePath: preferredBack,
+          licenseNumber: documentNumber,
         );
       case 'vehicle_rc':
-        final String? url = _rcDetails?.documentUrl;
-        final String? number = _rcDetails?.rcNumber;
-        final String? status = _rcDetails?.verificationStatus;
-        final String? uploadedAt = _rcDetails?.uploadedAtIso;
-        final DateTime? uploadedParsed = uploadedAt == null
-            ? null
-            : DateTime.tryParse(uploadedAt);
+        final String? preferredFront = _displayPath(frontImagePath);
+        final String? preferredBack = _displayPath(backImagePath);
         final oldFront = DocumentProgressStore.previousFrontImagePath(
           DocumentType.vehicleRC,
         );
@@ -300,18 +144,12 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _VehicleRCDetail(
-              frontImagePath: (url != null && url.trim().isNotEmpty)
-                  ? _resolveDocumentUrl(url)
-                  : frontImagePath,
-              backImagePath: backImagePath,
-              vehicleNumber: (number != null && number.trim().isNotEmpty)
-                  ? number
-                  : documentNumber,
+              frontImagePath: preferredFront,
+              backImagePath: preferredBack,
+              vehicleNumber: documentNumber,
               headerText: 'NEW RC',
-              statusText: _statusLabel(status),
-              uploadedAtText: uploadedParsed == null
-                  ? null
-                  : _formatReadableDate(uploadedParsed.toLocal()),
+              statusText: null,
+              uploadedAtText: null,
             ),
             if (hasOld) ...[
               const SizedBox(height: 22),
@@ -345,6 +183,29 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
           backImagePath: backImagePath,
         );
     }
+  }
+
+  String? _displayPath(String? raw) {
+    final String v = (raw ?? '').trim();
+    if (v.isEmpty) return null;
+    if (v.startsWith('http://') || v.startsWith('https://')) return v;
+
+    // Backend paths we want to turn into a full URL.
+    final String lower = v.toLowerCase();
+    final bool looksLikeBackendPath =
+        lower.startsWith('/api/') ||
+        lower.startsWith('api/') ||
+        lower.startsWith('/v1/') ||
+        lower.startsWith('v1/') ||
+        lower.contains('/api/v1/');
+
+    if (looksLikeBackendPath) {
+      return _resolveDocumentUrl(v.startsWith('/') ? v : '/$v');
+    }
+
+    // Local file paths on Android are absolute and start with `/` (e.g. `/storage/...`).
+    // Keep them untouched so `Image.file` renders (same behavior as PAN page).
+    return v;
   }
 
   DocumentType? _documentTypeFromAsset() {
@@ -471,17 +332,21 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
         previousNumber,
       );
     }
-    setState(() {});
+    setState(() {
+      _isEmpty = !_hasLocalOrUploaded(DocumentType.vehicleRC);
+    });
   }
 
   Future<void> _uploadDrivingLicense() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => const DocumentUploadScreen(initialStepIndex: 1),
+        builder: (_) => const DrivingLicenseUploadScreen(),
       ),
     );
     if (!mounted) return;
-    await _fetch();
+    setState(() {
+      _isEmpty = !_hasLocalOrUploaded(DocumentType.drivingLicense);
+    });
   }
 }
 
@@ -489,15 +354,11 @@ class _DrivingLicenseDetail extends StatelessWidget {
   final String? frontImagePath;
   final String? backImagePath;
   final String? licenseNumber;
-  final String? expiryText;
-  final String statusText;
 
   const _DrivingLicenseDetail({
     this.frontImagePath,
     this.backImagePath,
     this.licenseNumber,
-    this.expiryText,
-    this.statusText = 'Under Review',
   });
 
   @override
@@ -545,12 +406,6 @@ class _DrivingLicenseDetail extends StatelessWidget {
               value: licenseNumber?.isNotEmpty == true ? licenseNumber! : '—',
               valueLarge: true,
             ),
-            const SizedBox(height: 14),
-            _InfoRow(label: 'STATUS', value: statusText),
-            if (expiryText != null && expiryText!.trim().isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _InfoRow(label: 'EXPIRY DATE', value: expiryText!),
-            ],
           ],
         ),
       ],
@@ -689,55 +544,6 @@ class _EmptyState extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 60),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 46, color: Color(0xFFE53935)),
-            const SizedBox(height: 14),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.neutral888,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 46,
-              child: ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.emerald,
-                  foregroundColor: AppColors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
                   ),
                 ),
               ),
@@ -1123,6 +929,7 @@ class _ImageBox extends StatelessWidget {
     final height = fullWidth ? 160.0 : 90.0;
     final isDocument = _isDocumentPath(imagePath);
     final isNetwork = _isNetworkUrl(imagePath);
+    final headers = _authHeaders();
     if (imagePath == null || imagePath!.isEmpty) {
       return Container(
         width: width,
@@ -1186,6 +993,7 @@ class _ImageBox extends StatelessWidget {
                 imagePath!,
                 width: width,
                 fit: BoxFit.contain,
+                headers: headers,
                 filterQuality: FilterQuality.high,
                 errorBuilder: (_, _, _) => _imageFallback(width, height),
               ),
@@ -1201,6 +1009,7 @@ class _ImageBox extends StatelessWidget {
           width: width,
           height: height,
           fit: BoxFit.cover,
+          headers: headers,
           errorBuilder: (_, _, _) => _imageFallback(width, height),
         ),
       );
@@ -1288,6 +1097,13 @@ class _ImageBox extends StatelessWidget {
     if (path == null || path.isEmpty) return false;
     final lower = path.toLowerCase();
     return lower.startsWith('http://') || lower.startsWith('https://');
+  }
+
+  Map<String, String>? _authHeaders() {
+    final String token = (AuthTokenStore.accessToken() ?? '').trim();
+    if (token.isEmpty) return null;
+    final String tokenType = (AuthTokenStore.tokenType() ?? 'Bearer').trim();
+    return <String, String>{'Authorization': '$tokenType $token'};
   }
 
   String _basename(String? path) {
