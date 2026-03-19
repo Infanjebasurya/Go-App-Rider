@@ -10,7 +10,8 @@ abstract interface class DocumentsListRemoteDataSource {
   Future<DocumentsListResponseModel> fetchAll();
 }
 
-class DocumentsListRemoteDataSourceImpl implements DocumentsListRemoteDataSource {
+class DocumentsListRemoteDataSourceImpl
+    implements DocumentsListRemoteDataSource {
   DocumentsListRemoteDataSourceImpl({Dio? dio})
     : _dio =
           dio ??
@@ -162,4 +163,3 @@ class DocumentsListRemoteDataSourceImpl implements DocumentsListRemoteDataSource
     return 'Failed to fetch documents.';
   }
 }
-

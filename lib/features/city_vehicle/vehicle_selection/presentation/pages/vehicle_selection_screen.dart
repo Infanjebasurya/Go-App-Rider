@@ -71,9 +71,7 @@ class _VehicleSelectionViewState extends State<_VehicleSelectionView> {
     if (error != null) {
       messenger
         ..clearSnackBars()
-        ..showSnackBar(
-          SnackBarUtils.buildError(error),
-        );
+        ..showSnackBar(SnackBarUtils.buildError(error));
       return;
     }
 

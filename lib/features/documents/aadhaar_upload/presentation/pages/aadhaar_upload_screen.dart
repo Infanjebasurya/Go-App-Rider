@@ -151,7 +151,8 @@ class _AadhaarUploadViewState extends State<_AadhaarUploadView> {
                               ),
                               const Spacer(),
                               _StatusBadge(
-                                status: state.response!.front.verificationStatus,
+                                status:
+                                    state.response!.front.verificationStatus,
                               ),
                             ],
                           ),

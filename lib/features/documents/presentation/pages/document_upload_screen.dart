@@ -80,13 +80,17 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
               ? _successMessageStep(state)
               : _errorMessageStep(state);
 
-          final bool canSuppress = isSuccess &&
+          final bool canSuppress =
+              isSuccess &&
               (messageStep == DocumentStep.profilePhoto ||
                   messageStep == DocumentStep.drivingLicense ||
                   messageStep == DocumentStep.vehicleRC);
 
-          final bool shouldShow =
-              state.statusIsError ? true : (canSuppress ? _shouldShowSuccessSnackbar(messageStep, state) : true);
+          final bool shouldShow = state.statusIsError
+              ? true
+              : (canSuppress
+                    ? _shouldShowSuccessSnackbar(messageStep, state)
+                    : true);
 
           if (shouldShow) {
             if (state.statusIsError) {
@@ -210,12 +214,16 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
     if (idx >= 0 && idx < state.steps.length) {
       return state.steps[idx].step;
     }
-    return state.steps.isNotEmpty ? state.steps.last.step : DocumentStep.profilePhoto;
+    return state.steps.isNotEmpty
+        ? state.steps.last.step
+        : DocumentStep.profilePhoto;
   }
 
   DocumentStep _errorMessageStep(DocumentUploadState state) {
     if (state.isCurrentStepBank) {
-      return state.steps.isNotEmpty ? state.steps.last.step : DocumentStep.profilePhoto;
+      return state.steps.isNotEmpty
+          ? state.steps.last.step
+          : DocumentStep.profilePhoto;
     }
     return state.currentDocStep.step;
   }
@@ -227,7 +235,10 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
     return null;
   }
 
-  bool _shouldShowSuccessSnackbar(DocumentStep step, DocumentUploadState state) {
+  bool _shouldShowSuccessSnackbar(
+    DocumentStep step,
+    DocumentUploadState state,
+  ) {
     final StepData? stepData = _stepDataFor(state, step);
     if (stepData == null) return true;
 
@@ -235,8 +246,7 @@ class _DocumentUploadViewState extends State<_DocumentUploadView>
 
     final String signature = switch (step) {
       DocumentStep.profilePhoto => 'front:${stepData.frontPath ?? ''}',
-      DocumentStep.drivingLicense ||
-      DocumentStep.vehicleRC =>
+      DocumentStep.drivingLicense || DocumentStep.vehicleRC =>
         'front:${stepData.frontPath ?? ''}|back:${stepData.backPath ?? ''}|num:${stepData.documentNumber.trim()}',
       _ => '',
     };

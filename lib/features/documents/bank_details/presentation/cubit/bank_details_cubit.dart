@@ -122,4 +122,3 @@ class BankDetailsCubit extends Cubit<BankDetailsState> {
 
   void reset() => emit(BankDetailsState.initial());
 }
-

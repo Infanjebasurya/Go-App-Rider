@@ -274,8 +274,7 @@ class StepData extends Equatable {
   bool get isNumberValid => documentNumber.trim().isNotEmpty;
   bool get isProfileStep => step == DocumentStep.profilePhoto;
   bool get requiresBackSide =>
-      step != DocumentStep.identityPan &&
-      step != DocumentStep.profilePhoto;
+      step != DocumentStep.identityPan && step != DocumentStep.profilePhoto;
 
   bool get requiresExpiryDate => false;
 

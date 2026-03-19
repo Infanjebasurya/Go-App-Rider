@@ -72,7 +72,9 @@ class BankDetailsServiceImpl implements BankDetailsService {
       throw Exception('Upload failed. Please retry.');
     }
 
-    final last4 = account.length <= 4 ? account : account.substring(account.length - 4);
+    final last4 = account.length <= 4
+        ? account
+        : account.substring(account.length - 4);
     return BankDetailsResponseModel.fromJson(<String, dynamic>{
       'success': true,
       'bank_id': '1a579fec-da76-4d82-809c-0f3386226b7b',
@@ -144,7 +146,9 @@ class BankDetailsServiceImpl implements BankDetailsService {
 
     final Response<dynamic> response = await _dio.get(
       ApiEndpoints.bankDetails,
-      options: Options(headers: <String, dynamic>{'Authorization': 'Bearer $token'}),
+      options: Options(
+        headers: <String, dynamic>{'Authorization': 'Bearer $token'},
+      ),
     );
 
     if (response.data is! Map<String, dynamic>) {
@@ -161,4 +165,3 @@ class BankDetailsServiceImpl implements BankDetailsService {
     return 'bank_book.png';
   }
 }
-

@@ -205,7 +205,10 @@ bool _validateBankStep(DocumentUploadCubit cubit) {
   return valid;
 }
 
-Future<void> _saveAndNext(DocumentUploadCubit cubit, {required bool advance}) async {
+Future<void> _saveAndNext(
+  DocumentUploadCubit cubit, {
+  required bool advance,
+}) async {
   if (cubit.state.isSubmitting ||
       cubit._isPicking ||
       cubit.state.isProfileImageProcessing) {

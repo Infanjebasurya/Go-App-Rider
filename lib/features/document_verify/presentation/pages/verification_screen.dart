@@ -178,9 +178,9 @@ class _VerificationViewState extends State<_VerificationView> {
           ),
         )
         .then((_) {
-      if (!mounted) return;
-      verificationCubit.syncFromStore();
-    });
+          if (!mounted) return;
+          verificationCubit.syncFromStore();
+        });
   }
 
   int? _stepIndexForDoc(DocumentType type) {

@@ -15,12 +15,13 @@ abstract final class SnackBarUtils {
     final SnackBarBehavior resolvedBehavior =
         behavior ?? SnackBarBehavior.floating;
     final ShapeBorder resolvedShape =
-        shape ?? RoundedRectangleBorder(borderRadius: BorderRadius.circular(20));
+        shape ??
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20));
     final Color resolvedBackgroundColor =
         backgroundColor ?? AppColors.hexFF1A1A1A;
 
-    final EdgeInsetsGeometry? resolvedMargin = resolvedBehavior ==
-            SnackBarBehavior.floating
+    final EdgeInsetsGeometry? resolvedMargin =
+        resolvedBehavior == SnackBarBehavior.floating
         ? (margin ?? const EdgeInsets.fromLTRB(16, 0, 16, 16))
         : null;
 

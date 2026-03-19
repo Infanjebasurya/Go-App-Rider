@@ -30,14 +30,12 @@ class DrivingLicenseDetailsModel {
   factory DrivingLicenseDetailsModel.fromJson(Map<String, dynamic> json) {
     final dynamic frontRaw = json['front'];
     final dynamic backRaw = json['back'];
-    final DocumentSideDetailsModel? front =
-        frontRaw is Map<String, dynamic>
-            ? DocumentSideDetailsModel.fromJson(frontRaw)
-            : null;
-    final DocumentSideDetailsModel? back =
-        backRaw is Map<String, dynamic>
-            ? DocumentSideDetailsModel.fromJson(backRaw)
-            : null;
+    final DocumentSideDetailsModel? front = frontRaw is Map<String, dynamic>
+        ? DocumentSideDetailsModel.fromJson(frontRaw)
+        : null;
+    final DocumentSideDetailsModel? back = backRaw is Map<String, dynamic>
+        ? DocumentSideDetailsModel.fromJson(backRaw)
+        : null;
 
     final String? oldUrl =
         (json['document_url'] ??
@@ -52,8 +50,8 @@ class DrivingLicenseDetailsModel {
       id: (json['id'] ?? json['documentId'] ?? json['document_id'])?.toString(),
       driverId: (json['driver_id'] ?? json['driverId'])?.toString(),
       documentType: (json['document_type'] ?? json['documentType'])?.toString(),
-      documentUrl:
-          (oldUrl ?? front?.documentUrl ?? back?.documentUrl)?.toString(),
+      documentUrl: (oldUrl ?? front?.documentUrl ?? back?.documentUrl)
+          ?.toString(),
       front: front,
       back: back,
       documentNumber:
@@ -112,14 +110,12 @@ class VehicleRcDetailsModel {
   factory VehicleRcDetailsModel.fromJson(Map<String, dynamic> json) {
     final dynamic frontRaw = json['front'];
     final dynamic backRaw = json['back'];
-    final DocumentSideDetailsModel? front =
-        frontRaw is Map<String, dynamic>
-            ? DocumentSideDetailsModel.fromJson(frontRaw)
-            : null;
-    final DocumentSideDetailsModel? back =
-        backRaw is Map<String, dynamic>
-            ? DocumentSideDetailsModel.fromJson(backRaw)
-            : null;
+    final DocumentSideDetailsModel? front = frontRaw is Map<String, dynamic>
+        ? DocumentSideDetailsModel.fromJson(frontRaw)
+        : null;
+    final DocumentSideDetailsModel? back = backRaw is Map<String, dynamic>
+        ? DocumentSideDetailsModel.fromJson(backRaw)
+        : null;
 
     final String? oldUrl =
         (json['document_url'] ??
@@ -134,8 +130,8 @@ class VehicleRcDetailsModel {
       id: (json['id'] ?? json['documentId'] ?? json['document_id'])?.toString(),
       driverId: (json['driver_id'] ?? json['driverId'])?.toString(),
       documentType: (json['document_type'] ?? json['documentType'])?.toString(),
-      documentUrl:
-          (oldUrl ?? front?.documentUrl ?? back?.documentUrl)?.toString(),
+      documentUrl: (oldUrl ?? front?.documentUrl ?? back?.documentUrl)
+          ?.toString(),
       front: front,
       back: back,
       rcNumber:

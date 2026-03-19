@@ -10,7 +10,8 @@ class ApiEndpoints {
   static const String onboardingProgress = '/api/v1/onboarding/progress';
   static const String onboardingSubmit = '/api/v1/onboarding/submit';
   static const String profileImageUpload = '/api/v1/documents/profile-image';
-  static const String drivingLicenseUpload = '/api/v1/documents/driving-license';
+  static const String drivingLicenseUpload =
+      '/api/v1/documents/driving-license';
   static const String vehicleRcUpload = '/api/v1/documents/vehicle-rc';
   static const String documents = '/api/v1/documents';
   static const String submitAllDocuments = '/api/v1/documents/submit-all';

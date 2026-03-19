@@ -382,7 +382,9 @@ class _PreviewBox extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: hasLocal ? Image.file(File(filePath!), fit: BoxFit.cover) : const _EmptyPreview(),
+        child: hasLocal
+            ? Image.file(File(filePath!), fit: BoxFit.cover)
+            : const _EmptyPreview(),
       ),
     );
   }

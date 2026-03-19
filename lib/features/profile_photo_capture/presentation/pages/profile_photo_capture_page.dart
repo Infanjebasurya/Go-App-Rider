@@ -63,7 +63,8 @@ class _ProfilePhotoCaptureView extends StatelessWidget {
                     final String? path = state.photo?.path;
                     if (path != null) {
                       unawaited(
-                        context.read<FaceProfilePhotoCaptureCubit>()
+                        context
+                            .read<FaceProfilePhotoCaptureCubit>()
                             .prepareToExit(),
                       );
                       Navigator.of(context).pop<String>(path);

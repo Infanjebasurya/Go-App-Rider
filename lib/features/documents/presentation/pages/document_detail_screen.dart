@@ -41,11 +41,12 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   }
 
   bool _hasLocalOrUploaded(DocumentType type) {
-    final String front =
-        (DocumentProgressStore.frontImagePath(type) ?? '').trim();
-    final String back = (DocumentProgressStore.backImagePath(type) ?? '').trim();
-    final String number =
-        (DocumentProgressStore.documentNumber(type) ?? '').trim();
+    final String front = (DocumentProgressStore.frontImagePath(type) ?? '')
+        .trim();
+    final String back = (DocumentProgressStore.backImagePath(type) ?? '')
+        .trim();
+    final String number = (DocumentProgressStore.documentNumber(type) ?? '')
+        .trim();
     return front.isNotEmpty && back.isNotEmpty && number.isNotEmpty;
   }
 
@@ -71,8 +72,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               child: _buildBody(context),
             ),
           ),
-          if (isVehicleRc && !_isEmpty)
-            const _VehicleRcBottomPrompt(),
+          if (isVehicleRc && !_isEmpty) const _VehicleRcBottomPrompt(),
           if (isVehicleRc && !_isEmpty)
             _VehicleRcEditButton(onPressed: _editVehicleRc),
           if (!isVehicleRc) _EncryptionFooter(),
@@ -406,7 +406,6 @@ class _DrivingLicenseDetail extends StatelessWidget {
               value: licenseNumber?.isNotEmpty == true ? licenseNumber! : '—',
               valueLarge: true,
             ),
-
           ],
         ),
       ],
@@ -1005,16 +1004,16 @@ class _ImageBox extends StatelessWidget {
 
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
-      child: Image.network(
-        imagePath!,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        headers: headers,
-        errorBuilder: (_, _, _) => _imageFallback(width, height),
-      ),
-    );
-  }
+        child: Image.network(
+          imagePath!,
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+          headers: headers,
+          errorBuilder: (_, _, _) => _imageFallback(width, height),
+        ),
+      );
+    }
 
     if (preserveOriginalAspect) {
       return FutureBuilder<double>(

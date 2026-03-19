@@ -67,12 +67,12 @@ class DocumentsCubit extends Cubit<DocumentsState> {
       final DocumentsListResponseModel response = await _remoteDataSource
           .fetchAll();
       final docs = _mapFromApi(response.documents);
-      final allVerified = docs.every((d) => d.status == DocumentStatus.verified);
+      final allVerified = docs.every(
+        (d) => d.status == DocumentStatus.verified,
+      );
       emit(DocumentsLoaded(documents: docs, allVerified: allVerified));
     } catch (e) {
-      emit(
-        DocumentsError(e.toString().replaceFirst('Exception: ', '').trim()),
-      );
+      emit(DocumentsError(e.toString().replaceFirst('Exception: ', '').trim()));
     }
   }
 
@@ -92,9 +92,23 @@ class DocumentsCubit extends Cubit<DocumentsState> {
   void refresh() => loadDocuments();
 
   List<DocumentModel> _mapFromApi(List<DocumentListItemModel> items) {
-    final DocumentBundle dl = _bundleFor(items, frontType: 'license_front', backType: 'license_back');
-    final DocumentBundle rc = _bundleFor(items, frontType: 'rc_book_front', backType: 'rc_book_back');
-    final DocumentBundle aadhaar = _bundleFor(items, frontType: 'aadhar_front', backType: 'aadhar_back', altFrontType: 'aadhaar_front', altBackType: 'aadhaar_back');
+    final DocumentBundle dl = _bundleFor(
+      items,
+      frontType: 'license_front',
+      backType: 'license_back',
+    );
+    final DocumentBundle rc = _bundleFor(
+      items,
+      frontType: 'rc_book_front',
+      backType: 'rc_book_back',
+    );
+    final DocumentBundle aadhaar = _bundleFor(
+      items,
+      frontType: 'aadhar_front',
+      backType: 'aadhar_back',
+      altFrontType: 'aadhaar_front',
+      altBackType: 'aadhaar_back',
+    );
     final DocumentBundle pan = _bundleFor(
       items,
       frontType: 'pan_front',
@@ -265,7 +279,8 @@ class DocumentsCubit extends Cubit<DocumentsState> {
         front ??= item;
       }
 
-      final bool isBackMatch = backType != null &&
+      final bool isBackMatch =
+          backType != null &&
           (t == backType ||
               (altBackType != null && t == altBackType) ||
               (backType == 'license_back' && t == 'driving_license_back') ||
@@ -278,8 +293,8 @@ class DocumentsCubit extends Cubit<DocumentsState> {
       }
     }
 
-    final String? number =
-        (front?.documentNumber ?? back?.documentNumber)?.toString();
+    final String? number = (front?.documentNumber ?? back?.documentNumber)
+        ?.toString();
 
     final String? statusRaw =
         (front?.verificationStatus ?? back?.verificationStatus)?.toString();
@@ -299,8 +314,8 @@ class DocumentsCubit extends Cubit<DocumentsState> {
       backUrl: _resolveUrl(back?.documentUrl),
       number: number?.trim().isEmpty ?? true ? null : number!.trim(),
       status: status,
-      rejectionReason:
-          (front?.rejectionReason ?? back?.rejectionReason)?.toString(),
+      rejectionReason: (front?.rejectionReason ?? back?.rejectionReason)
+          ?.toString(),
     );
   }
 

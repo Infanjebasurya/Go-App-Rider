@@ -15,4 +15,3 @@ abstract interface class BankDetailsRepository {
 
   Future<BankDetailsModel> getBankDetails();
 }
-

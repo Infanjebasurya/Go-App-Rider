@@ -502,7 +502,8 @@ void _registerDocuments() {
       ),
     )
     ..registerFactory<DocumentsCubit>(
-      () => DocumentsCubit(remoteDataSource: sl<DocumentsListRemoteDataSource>()),
+      () =>
+          DocumentsCubit(remoteDataSource: sl<DocumentsListRemoteDataSource>()),
     )
     ..registerLazySingleton<SubmitAllDocumentsRemoteDataSource>(
       () => SubmitAllDocumentsRemoteDataSourceImpl(),

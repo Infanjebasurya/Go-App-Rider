@@ -36,8 +36,10 @@ class BankDetailsRepositoryImpl implements BankDetailsRepository {
       throw FormatException('Account numbers do not match.');
     }
 
-    final ifsc = _requireNonEmpty(ifscCode, message: 'IFSC code is required.')
-        .toUpperCase();
+    final ifsc = _requireNonEmpty(
+      ifscCode,
+      message: 'IFSC code is required.',
+    ).toUpperCase();
     if (!_ifscRegex.hasMatch(ifsc)) {
       throw FormatException('Enter a valid IFSC code.');
     }
@@ -73,7 +75,9 @@ class BankDetailsRepositoryImpl implements BankDetailsRepository {
           : 'XXXX XXXX ${_last4(account)}',
       ifsc: details.ifsc.trim().toUpperCase(),
       bankName: _normalizeBankName(details.bankName),
-      type: _normalizeType(details.type.isEmpty ? normalizedType : details.type),
+      type: _normalizeType(
+        details.type.isEmpty ? normalizedType : details.type,
+      ),
       bankBookUrl: details.bankBookUrl,
       status: details.status.trim().isEmpty ? 'pending' : details.status.trim(),
     );
@@ -129,4 +133,3 @@ class BankDetailsRepositoryImpl implements BankDetailsRepository {
     return raw.substring(raw.length - 4);
   }
 }
-

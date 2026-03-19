@@ -50,7 +50,8 @@ class _VehicleRcUploadViewState extends State<_VehicleRcUploadView> {
   Widget build(BuildContext context) {
     return BlocConsumer<DocumentUploadCubit, DocumentUploadState>(
       listener: (context, state) {
-        if (state.statusMessage == null || state.statusMessage!.trim().isEmpty) {
+        if (state.statusMessage == null ||
+            state.statusMessage!.trim().isEmpty) {
           return;
         }
 

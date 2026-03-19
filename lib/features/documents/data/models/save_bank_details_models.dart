@@ -23,19 +23,16 @@ class BankDetailsModel {
     return BankDetailsModel(
       bankId: (json['bank_id'] ?? json['bankId'] ?? json['id'] ?? '')
           .toString(),
-      accountHolder:
-          (json['account_holder'] ?? json['accountHolder'] ?? '').toString(),
+      accountHolder: (json['account_holder'] ?? json['accountHolder'] ?? '')
+          .toString(),
       maskedAccountNumber:
-          (json['masked_account_number'] ??
-                  json['maskedAccountNumber'] ??
-                  '')
+          (json['masked_account_number'] ?? json['maskedAccountNumber'] ?? '')
               .toString(),
       ifsc: (json['ifsc'] ?? json['ifsc_code'] ?? json['ifscCode'] ?? '')
           .toString(),
       bankName: (json['bank_name'] ?? json['bankName'] ?? '').toString(),
       type: (json['type'] ?? '').toString(),
-      bankBookUrl:
-          (json['bank_book_url'] ?? json['bankBookUrl'])?.toString(),
+      bankBookUrl: (json['bank_book_url'] ?? json['bankBookUrl'])?.toString(),
       status: (json['status'] ?? '').toString(),
     );
   }
@@ -108,4 +105,3 @@ class AddBankDetailsRequestModel {
     'type': type,
   };
 }
-

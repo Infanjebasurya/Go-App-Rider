@@ -54,8 +54,9 @@ class BankDetailsState extends Equatable {
     if (bankName.trim().isEmpty) return false;
     if (accountNumber.trim().length < 8) return false;
     if (confirmAccountNumber.trim() != accountNumber.trim()) return false;
-    if (!RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$')
-        .hasMatch(ifscCode.trim().toUpperCase())) {
+    if (!RegExp(
+      r'^[A-Z]{4}0[A-Z0-9]{6}$',
+    ).hasMatch(ifscCode.trim().toUpperCase())) {
       return false;
     }
     final t = type.trim().toLowerCase();
@@ -85,8 +86,7 @@ class BankDetailsState extends Equatable {
       accountHolderName: accountHolderName ?? this.accountHolderName,
       bankName: bankName ?? this.bankName,
       accountNumber: accountNumber ?? this.accountNumber,
-      confirmAccountNumber:
-          confirmAccountNumber ?? this.confirmAccountNumber,
+      confirmAccountNumber: confirmAccountNumber ?? this.confirmAccountNumber,
       ifscCode: ifscCode ?? this.ifscCode,
       type: type ?? this.type,
       bankBookPath: bankBookPath ?? this.bankBookPath,
@@ -107,4 +107,3 @@ class BankDetailsState extends Equatable {
     bankBookPath,
   ];
 }
-

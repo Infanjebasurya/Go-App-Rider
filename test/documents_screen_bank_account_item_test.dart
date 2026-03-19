@@ -7,7 +7,8 @@ import 'package:goapp/features/documents/data/models/documents_list_models.dart'
 import 'package:goapp/features/documents/presentation/cubit/documents_cubit.dart';
 import 'package:goapp/features/documents/presentation/pages/documents_screen.dart';
 
-class _FakeDocumentsListRemoteDataSource implements DocumentsListRemoteDataSource {
+class _FakeDocumentsListRemoteDataSource
+    implements DocumentsListRemoteDataSource {
   @override
   Future<DocumentsListResponseModel> fetchAll() async {
     return const DocumentsListResponseModel(success: true, documents: []);
@@ -24,7 +25,9 @@ void main() {
       sl.unregister<DocumentsCubit>();
     }
     sl.registerFactory<DocumentsCubit>(
-      () => DocumentsCubit(remoteDataSource: _FakeDocumentsListRemoteDataSource()),
+      () => DocumentsCubit(
+        remoteDataSource: _FakeDocumentsListRemoteDataSource(),
+      ),
     );
   });
 

@@ -93,14 +93,12 @@ class UploadDrivingLicenseResponseModel extends DocumentUploadResponseModel {
         ? DrivingLicenseSideModel.fromJson(backRaw)
         : null;
 
-    final String? derivedId =
-        (base.documentId ?? front?.id ?? back?.id)?.toString();
+    final String? derivedId = (base.documentId ?? front?.id ?? back?.id)
+        ?.toString();
     final String? derivedUrl =
         (base.fileUrl ?? front?.documentUrl ?? back?.documentUrl)?.toString();
     final String? derivedStatus =
-        (base.status ??
-                front?.verificationStatus ??
-                back?.verificationStatus)
+        (base.status ?? front?.verificationStatus ?? back?.verificationStatus)
             ?.toString();
 
     return UploadDrivingLicenseResponseModel(
@@ -144,14 +142,12 @@ class UploadVehicleRcResponseModel extends DocumentUploadResponseModel {
         ? VehicleRcSideModel.fromJson(backRaw)
         : null;
 
-    final String? derivedId =
-        (base.documentId ?? front?.id ?? back?.id)?.toString();
+    final String? derivedId = (base.documentId ?? front?.id ?? back?.id)
+        ?.toString();
     final String? derivedUrl =
         (base.fileUrl ?? front?.documentUrl ?? back?.documentUrl)?.toString();
     final String? derivedStatus =
-        (base.status ??
-                front?.verificationStatus ??
-                back?.verificationStatus)
+        (base.status ?? front?.verificationStatus ?? back?.verificationStatus)
             ?.toString();
 
     return UploadVehicleRcResponseModel(

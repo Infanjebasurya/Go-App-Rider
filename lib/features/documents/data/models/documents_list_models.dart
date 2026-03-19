@@ -11,17 +11,16 @@ class DocumentsListResponseModel {
 
   factory DocumentsListResponseModel.fromJson(Map<String, dynamic> json) {
     final dynamic rawDocs = json['documents'] ?? json['data'] ?? json['result'];
-    final List<DocumentListItemModel> docs =
-        rawDocs is List
-            ? rawDocs
-                .whereType<Map>()
-                .map(
-                  (e) => DocumentListItemModel.fromJson(
-                    Map<String, dynamic>.from(e),
-                  ),
-                )
-                .toList()
-            : <DocumentListItemModel>[];
+    final List<DocumentListItemModel> docs = rawDocs is List
+        ? rawDocs
+              .whereType<Map>()
+              .map(
+                (e) => DocumentListItemModel.fromJson(
+                  Map<String, dynamic>.from(e),
+                ),
+              )
+              .toList()
+        : <DocumentListItemModel>[];
 
     return DocumentsListResponseModel(
       success: _parseBool(json['success'] ?? json['status']) ?? false,
@@ -92,4 +91,3 @@ class DocumentListItemModel {
     );
   }
 }
-
