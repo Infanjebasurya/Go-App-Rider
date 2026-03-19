@@ -134,6 +134,10 @@ bool _validateBankStep(DocumentUploadCubit cubit) {
   );
   bool valid = true;
 
+  if (b.accountHolderName.trim().isEmpty) {
+    updated = updated.copyWith(nameError: 'Account holder name is required');
+    valid = false;
+  }
   if (b.accountHolderName.trim().isNotEmpty &&
       !RegExp(
         r'^[A-Z ]+$',
@@ -209,15 +213,47 @@ Future<void> _saveAndNext(DocumentUploadCubit cubit, {required bool advance}) as
   }
   if (cubit.state.isCurrentStepBank) {
     if (!_validateBankStep(cubit)) return;
-    DocumentProgressStore.setCompleted(
-      DocumentType.bankDetails,
-      cubit.state.bankData.isComplete,
-    );
-    cubit._emitState(cubit.state.copyWith(isSubmitting: true));
-    await Future.delayed(const Duration(seconds: 2));
     cubit._emitState(
-      cubit.state.copyWith(isSubmitting: false, isAllDone: true),
+      cubit.state.copyWith(
+        isSubmitting: true,
+        clearStatusMessage: true,
+        statusIsError: false,
+      ),
     );
+
+    try {
+      final b = cubit.state.bankData;
+      final path = (b.bankDocumentPath ?? '').trim();
+      await cubit._bankDetailsRepository.addBankDetails(
+        accountHolderName: b.accountHolderName,
+        bankName: b.bankName,
+        accountNumber: b.accountNumber,
+        confirmAccountNumber: b.confirmAccountNumber,
+        ifscCode: b.ifscCode,
+        type: 'savings',
+        bankBook: File(path),
+      );
+
+      DocumentProgressStore.setCompleted(DocumentType.bankDetails, true);
+      cubit._emitState(
+        cubit.state.copyWith(
+          isSubmitting: false,
+          isAllDone: true,
+          statusMessage: 'Bank details saved successfully.',
+          statusIsError: false,
+        ),
+      );
+    } catch (e) {
+      DocumentProgressStore.setCompleted(DocumentType.bankDetails, false);
+      final msg = e.toString().replaceFirst('Exception: ', '').trim();
+      cubit._emitState(
+        cubit.state.copyWith(
+          isSubmitting: false,
+          statusMessage: msg.isEmpty ? 'Failed to save bank details.' : msg,
+          statusIsError: true,
+        ),
+      );
+    }
   } else {
     cubit._emitState(cubit.state.copyWith(isSubmitting: true));
     if (!_validateDocStep(cubit)) {

@@ -6,6 +6,9 @@ import 'package:goapp/core/service/file_picker_service.dart';
 import 'package:goapp/core/service/image_picker_service.dart';
 import 'package:goapp/core/storage/driver_id_store.dart';
 import 'package:goapp/core/storage/text_field_store.dart';
+import 'package:goapp/features/documents/data/datasources/bank_details_service.dart';
+import 'package:goapp/features/documents/data/repositories/bank_details_repository.dart';
+import 'package:goapp/features/documents/data/repositories/bank_details_repository_impl.dart';
 import 'package:goapp/features/documents/data/datasources/driving_license_upload_remote_data_source.dart';
 import 'package:goapp/features/documents/data/datasources/profile_image_upload_remote_data_source.dart';
 import 'package:goapp/features/documents/data/datasources/vehicle_rc_upload_remote_data_source.dart';
@@ -49,6 +52,7 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     required ProfileImageUploadRemoteDataSource
     profileImageUploadRemoteDataSource,
     required VehicleRcUploadRemoteDataSource vehicleRcUploadRemoteDataSource,
+    BankDetailsRepository? bankDetailsRepository,
   }) : _imagePickerService = imagePickerService,
        _filePickerService = filePickerService,
        _fileService = fileService,
@@ -56,6 +60,11 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
            drivingLicenseUploadRemoteDataSource,
        _profileImageUploadRemoteDataSource = profileImageUploadRemoteDataSource,
        _vehicleRcUploadRemoteDataSource = vehicleRcUploadRemoteDataSource,
+       _bankDetailsRepository =
+           bankDetailsRepository ??
+           BankDetailsRepositoryImpl(
+             service: BankDetailsServiceImpl(mode: DataMode.mock),
+           ),
        _isTest = _isFlutterTestEnvironment(),
        super(
          DocumentUploadState.initial().copyWith(
@@ -72,6 +81,7 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
   _drivingLicenseUploadRemoteDataSource;
   final ProfileImageUploadRemoteDataSource _profileImageUploadRemoteDataSource;
   final VehicleRcUploadRemoteDataSource _vehicleRcUploadRemoteDataSource;
+  final BankDetailsRepository _bankDetailsRepository;
   final bool _isTest;
   bool _isPicking = false;
 

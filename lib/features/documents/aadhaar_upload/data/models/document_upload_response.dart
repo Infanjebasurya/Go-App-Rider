@@ -1,47 +1,71 @@
-class DocumentUploadResponse {
-  const DocumentUploadResponse({
-    required this.success,
+class AadhaarSide {
+  const AadhaarSide({
     required this.id,
-    required this.driverId,
-    required this.documentType,
     required this.documentUrl,
     required this.verificationStatus,
-    required this.requestId,
   });
 
-  final bool success;
   final String id;
-  final String driverId;
-  final String documentType;
   final String documentUrl;
   final String verificationStatus;
-  final String requestId;
 
-  factory DocumentUploadResponse.fromJson(Map<String, dynamic> json) {
-    return DocumentUploadResponse(
-      success: json['success'] == true,
+  factory AadhaarSide.fromJson(Map<String, dynamic> json) {
+    return AadhaarSide(
       id: (json['id'] ?? '').toString(),
-      driverId: (json['driverId'] ?? json['driver_id'] ?? '').toString(),
-      documentType: (json['documentType'] ?? json['document_type'] ?? '')
-          .toString(),
       documentUrl: (json['documentUrl'] ?? json['document_url'] ?? '')
           .toString(),
       verificationStatus:
           (json['verificationStatus'] ?? json['verification_status'] ?? '')
               .toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'documentUrl': documentUrl,
+    'verificationStatus': verificationStatus,
+  };
+}
+
+class AadhaarUploadResponse {
+  const AadhaarUploadResponse({
+    required this.success,
+    required this.documentType,
+    required this.front,
+    required this.back,
+    required this.requestId,
+  });
+
+  final bool success;
+  final String documentType;
+  final AadhaarSide front;
+  final AadhaarSide back;
+  final String requestId;
+
+  factory AadhaarUploadResponse.fromJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> frontJson = _asMap(json['front']);
+    final Map<String, dynamic> backJson = _asMap(json['back']);
+    return AadhaarUploadResponse(
+      success: json['success'] == true,
+      documentType: (json['documentType'] ?? json['document_type'] ?? '')
+          .toString(),
+      front: AadhaarSide.fromJson(frontJson),
+      back: AadhaarSide.fromJson(backJson),
       requestId: (json['requestId'] ?? json['request_id'] ?? '').toString(),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'success': success,
-      'id': id,
-      'driverId': driverId,
-      'documentType': documentType,
-      'documentUrl': documentUrl,
-      'verificationStatus': verificationStatus,
-      'requestId': requestId,
-    };
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'success': success,
+    'documentType': documentType,
+    'front': front.toJson(),
+    'back': back.toJson(),
+    'requestId': requestId,
+  };
+
+  static Map<String, dynamic> _asMap(Object? raw) {
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return const <String, dynamic>{};
   }
 }

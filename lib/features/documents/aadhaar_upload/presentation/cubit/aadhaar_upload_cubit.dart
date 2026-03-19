@@ -7,6 +7,8 @@ import 'package:goapp/core/service/image_picker_service.dart';
 import 'package:goapp/features/documents/aadhaar_upload/domain/repositories/aadhaar_upload_repository.dart';
 import 'package:goapp/features/documents/aadhaar_upload/presentation/cubit/aadhaar_upload_state.dart';
 
+enum AadhaarImageSide { front, back }
+
 class AadhaarUploadCubit extends Cubit<AadhaarUploadState> {
   AadhaarUploadCubit({
     required AadhaarUploadRepository repository,
@@ -39,37 +41,70 @@ class AadhaarUploadCubit extends Cubit<AadhaarUploadState> {
     );
   }
 
-  Future<void> pickFromCamera() async {
+  Future<void> pickFromCamera(AadhaarImageSide side) async {
     emit(state.copyWith(clearError: true, clearResponse: true));
     final picked = await _imagePickerService.pickImage(
       source: AppImageSource.camera,
       imageQuality: 95,
     );
     if (picked == null) return;
-    emit(
-      state.copyWith(
-        filePath: picked.path,
-        fileName: picked.name,
-        clearAadhaarError: true,
-      ),
-    );
+    switch (side) {
+      case AadhaarImageSide.front:
+        emit(
+          state.copyWith(
+            frontFilePath: picked.path,
+            frontFileName: picked.name,
+            clearAadhaarError: true,
+          ),
+        );
+        return;
+      case AadhaarImageSide.back:
+        emit(
+          state.copyWith(
+            backFilePath: picked.path,
+            backFileName: picked.name,
+            clearAadhaarError: true,
+          ),
+        );
+        return;
+    }
   }
 
-  Future<void> pickFromGallery() async {
+  Future<void> pickFromGallery(AadhaarImageSide side) async {
     emit(state.copyWith(clearError: true, clearResponse: true));
     final picked = await _filePickerService.pickImage();
     if (picked == null) return;
-    emit(
-      state.copyWith(
-        filePath: picked.path,
-        fileName: picked.name,
-        clearAadhaarError: true,
-      ),
-    );
+    switch (side) {
+      case AadhaarImageSide.front:
+        emit(
+          state.copyWith(
+            frontFilePath: picked.path,
+            frontFileName: picked.name,
+            clearAadhaarError: true,
+          ),
+        );
+        return;
+      case AadhaarImageSide.back:
+        emit(
+          state.copyWith(
+            backFilePath: picked.path,
+            backFileName: picked.name,
+            clearAadhaarError: true,
+          ),
+        );
+        return;
+    }
   }
 
-  void removeFile() {
-    emit(state.copyWith(clearFile: true));
+  void removeFile(AadhaarImageSide side) {
+    switch (side) {
+      case AadhaarImageSide.front:
+        emit(state.copyWith(clearFrontFile: true));
+        return;
+      case AadhaarImageSide.back:
+        emit(state.copyWith(clearBackFile: true));
+        return;
+    }
   }
 
   Future<void> submit() async {
@@ -80,20 +115,32 @@ class AadhaarUploadCubit extends Cubit<AadhaarUploadState> {
       );
       return;
     }
-    final path = state.filePath;
-    if (path == null || path.trim().isEmpty) {
-      emit(state.copyWith(errorMessage: 'Please upload your Aadhaar image.'));
+    final frontPath = state.frontFilePath;
+    if (frontPath == null || frontPath.trim().isEmpty) {
+      emit(
+        state.copyWith(errorMessage: 'Please upload your Aadhaar front image.'),
+      );
+      return;
+    }
+    final backPath = state.backFilePath;
+    if (backPath == null || backPath.trim().isEmpty) {
+      emit(
+        state.copyWith(errorMessage: 'Please upload your Aadhaar back image.'),
+      );
       return;
     }
 
-    _log('Aadhaar upload -> submit aadhaar=$aadhaar, file=$path');
+    _log(
+      'Aadhaar upload -> submit aadhaar=$aadhaar, front=$frontPath, back=$backPath',
+    );
     emit(
       state.copyWith(isSubmitting: true, clearError: true, clearResponse: true),
     );
 
     try {
       final response = await _repository.uploadAadhaar(
-        file: File(path),
+        frontFile: File(frontPath),
+        backFile: File(backPath),
         aadhaarNumber: aadhaar,
       );
       _log('Aadhaar upload response <- ${response.toJson()}');

@@ -17,7 +17,6 @@ class ApiConfig {
     defaultValue: '',
   );
 
-  // Static ngrok URL used when no active backend is available.
   // Replace this with the live URL when the backend is online.
   static const String ngrokBaseUrl =
       'https://nia-unterrestrial-remy.ngrok-free.dev';

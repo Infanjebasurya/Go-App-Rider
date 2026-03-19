@@ -4,8 +4,10 @@ import 'package:goapp/features/documents/aadhaar_upload/data/models/document_upl
 class AadhaarUploadState extends Equatable {
   const AadhaarUploadState({
     required this.aadhaarNumber,
-    required this.filePath,
-    required this.fileName,
+    required this.frontFilePath,
+    required this.frontFileName,
+    required this.backFilePath,
+    required this.backFileName,
     required this.isSubmitting,
     required this.response,
     required this.errorMessage,
@@ -13,46 +15,63 @@ class AadhaarUploadState extends Equatable {
   });
 
   final String aadhaarNumber;
-  final String? filePath;
-  final String? fileName;
+  final String? frontFilePath;
+  final String? frontFileName;
+  final String? backFilePath;
+  final String? backFileName;
   final bool isSubmitting;
-  final DocumentUploadResponse? response;
+  final AadhaarUploadResponse? response;
   final String? errorMessage;
   final String? aadhaarError;
 
   factory AadhaarUploadState.initial() => const AadhaarUploadState(
     aadhaarNumber: '',
-    filePath: null,
-    fileName: null,
+    frontFilePath: null,
+    frontFileName: null,
+    backFilePath: null,
+    backFileName: null,
     isSubmitting: false,
     response: null,
     errorMessage: null,
     aadhaarError: null,
   );
 
-  bool get hasFile => filePath != null && filePath!.trim().isNotEmpty;
+  bool get hasFrontFile =>
+      frontFilePath != null && frontFilePath!.trim().isNotEmpty;
+  bool get hasBackFile =>
+      backFilePath != null && backFilePath!.trim().isNotEmpty;
 
   bool get isAadhaarValid => RegExp(r'^\d{12}$').hasMatch(aadhaarNumber.trim());
 
-  bool get canSubmit => isAadhaarValid && hasFile && !isSubmitting;
+  bool get canSubmit =>
+      isAadhaarValid && hasFrontFile && hasBackFile && !isSubmitting;
 
   AadhaarUploadState copyWith({
     String? aadhaarNumber,
-    String? filePath,
-    String? fileName,
+    String? frontFilePath,
+    String? frontFileName,
+    String? backFilePath,
+    String? backFileName,
     bool? isSubmitting,
-    DocumentUploadResponse? response,
+    AadhaarUploadResponse? response,
     String? errorMessage,
     String? aadhaarError,
     bool clearResponse = false,
     bool clearError = false,
-    bool clearFile = false,
+    bool clearFrontFile = false,
+    bool clearBackFile = false,
     bool clearAadhaarError = false,
   }) {
     return AadhaarUploadState(
       aadhaarNumber: aadhaarNumber ?? this.aadhaarNumber,
-      filePath: clearFile ? null : (filePath ?? this.filePath),
-      fileName: clearFile ? null : (fileName ?? this.fileName),
+      frontFilePath: clearFrontFile
+          ? null
+          : (frontFilePath ?? this.frontFilePath),
+      frontFileName: clearFrontFile
+          ? null
+          : (frontFileName ?? this.frontFileName),
+      backFilePath: clearBackFile ? null : (backFilePath ?? this.backFilePath),
+      backFileName: clearBackFile ? null : (backFileName ?? this.backFileName),
       isSubmitting: isSubmitting ?? this.isSubmitting,
       response: clearResponse ? null : (response ?? this.response),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -65,8 +84,10 @@ class AadhaarUploadState extends Equatable {
   @override
   List<Object?> get props => <Object?>[
     aadhaarNumber,
-    filePath,
-    fileName,
+    frontFilePath,
+    frontFileName,
+    backFilePath,
+    backFileName,
     isSubmitting,
     response,
     errorMessage,

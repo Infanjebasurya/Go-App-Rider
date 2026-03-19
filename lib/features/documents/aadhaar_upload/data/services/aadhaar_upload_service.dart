@@ -3,14 +3,16 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:goapp/core/config/api_config.dart';
+import 'package:goapp/core/network/api_endpoints.dart';
 import 'package:goapp/core/storage/auth_token_store.dart';
 import 'package:goapp/features/documents/aadhaar_upload/data/models/document_upload_response.dart';
 
 enum DataMode { mock, live }
 
 abstract interface class AadhaarUploadService {
-  Future<DocumentUploadResponse> uploadAadhaar({
-    required File file,
+  Future<AadhaarUploadResponse> uploadAadhaar({
+    required File frontFile,
+    required File backFile,
     required String aadhaarNumber,
   });
 }
@@ -28,26 +30,34 @@ class AadhaarUploadServiceImpl implements AadhaarUploadService {
             ),
           );
 
-  static const String _endpointPath = '/api/v1/documents/aadhaar';
-
   final DataMode _mode;
   final Dio _dio;
 
   @override
-  Future<DocumentUploadResponse> uploadAadhaar({
-    required File file,
+  Future<AadhaarUploadResponse> uploadAadhaar({
+    required File frontFile,
+    required File backFile,
     required String aadhaarNumber,
   }) {
     switch (_mode) {
       case DataMode.mock:
-        return _mockUpload(file: file, aadhaarNumber: aadhaarNumber);
+        return _mockUpload(
+          frontFile: frontFile,
+          backFile: backFile,
+          aadhaarNumber: aadhaarNumber,
+        );
       case DataMode.live:
-        return _liveUpload(file: file, aadhaarNumber: aadhaarNumber);
+        return _liveUpload(
+          frontFile: frontFile,
+          backFile: backFile,
+          aadhaarNumber: aadhaarNumber,
+        );
     }
   }
 
-  Future<DocumentUploadResponse> _mockUpload({
-    required File file,
+  Future<AadhaarUploadResponse> _mockUpload({
+    required File frontFile,
+    required File backFile,
     required String aadhaarNumber,
   }) async {
     await Future<void>.delayed(const Duration(seconds: 2));
@@ -60,23 +70,33 @@ class AadhaarUploadServiceImpl implements AadhaarUploadService {
       throw Exception('Upload failed. Please retry.');
     }
 
-    final fileName = file.uri.pathSegments.isNotEmpty
-        ? file.uri.pathSegments.last
-        : 'aadhaar.png';
+    final String frontName = frontFile.uri.pathSegments.isNotEmpty
+        ? frontFile.uri.pathSegments.last
+        : 'aadhaar_front.png';
+    final String backName = backFile.uri.pathSegments.isNotEmpty
+        ? backFile.uri.pathSegments.last
+        : 'aadhaar_back.png';
 
-    return DocumentUploadResponse(
+    return AadhaarUploadResponse(
       success: true,
-      id: '448915ba-bc96-436e-b959-101b33ba2f0d',
-      driverId: '20000000-0000-4000-8000-000000000001',
       documentType: 'aadhar',
-      documentUrl: '/api/v1/documents/file/$fileName',
-      verificationStatus: 'pending',
-      requestId: 'e8cb3c41-3c8d-477c-bb59-6969373284b3',
+      front: AadhaarSide(
+        id: '9a0d9640-6fea-4f83-807f-da8291043a17',
+        documentUrl: '/api/v1/documents/file/$frontName',
+        verificationStatus: 'pending',
+      ),
+      back: AadhaarSide(
+        id: '3b4a1c30-65df-4bf6-8a7c-e889d59eea4c',
+        documentUrl: '/api/v1/documents/file/$backName',
+        verificationStatus: 'pending',
+      ),
+      requestId: '27109e02-df35-40c9-a68c-e4d098a115b2',
     );
   }
 
-  Future<DocumentUploadResponse> _liveUpload({
-    required File file,
+  Future<AadhaarUploadResponse> _liveUpload({
+    required File frontFile,
+    required File backFile,
     required String aadhaarNumber,
   }) async {
     final token = AuthTokenStore.accessToken();
@@ -84,18 +104,27 @@ class AadhaarUploadServiceImpl implements AadhaarUploadService {
       throw Exception('Session expired. Please sign in again.');
     }
 
+    final String frontName = frontFile.uri.pathSegments.isNotEmpty
+        ? frontFile.uri.pathSegments.last
+        : 'aadhaar_front.png';
+    final String backName = backFile.uri.pathSegments.isNotEmpty
+        ? backFile.uri.pathSegments.last
+        : 'aadhaar_back.png';
+
     final formData = FormData.fromMap(<String, dynamic>{
       'aadhaar_number': aadhaarNumber,
-      'file': await MultipartFile.fromFile(
-        file.path,
-        filename: file.uri.pathSegments.isNotEmpty
-            ? file.uri.pathSegments.last
-            : 'aadhaar.png',
+      'file_front': await MultipartFile.fromFile(
+        frontFile.path,
+        filename: frontName,
+      ),
+      'file_back': await MultipartFile.fromFile(
+        backFile.path,
+        filename: backName,
       ),
     });
 
     final Response<dynamic> response = await _dio.post(
-      _endpointPath,
+      ApiEndpoints.documentsAadhaar,
       data: formData,
       options: Options(
         contentType: 'multipart/form-data',
@@ -107,7 +136,7 @@ class AadhaarUploadServiceImpl implements AadhaarUploadService {
       throw Exception('Invalid server response.');
     }
 
-    return DocumentUploadResponse.fromJson(
+    return AadhaarUploadResponse.fromJson(
       response.data as Map<String, dynamic>,
     );
   }

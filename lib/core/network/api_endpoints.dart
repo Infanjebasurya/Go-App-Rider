@@ -16,6 +16,7 @@ class ApiEndpoints {
   static const String documentsAadhaar = '/api/v1/documents/aadhaar';
   static const String documentsPan = '/api/v1/documents/pan';
   static const String documentsStatus = '/api/v1/documents/status';
+  static const String bankDetails = '/api/v1/bank/details';
   static const String vehicleTypes = '/api/v1/vehicles/types';
   static const String vehicleSelect = '/api/v1/vehicles/select';
   static const String captainProfile = '/v1/captain/profile';

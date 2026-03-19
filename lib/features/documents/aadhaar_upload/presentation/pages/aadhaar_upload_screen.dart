@@ -104,48 +104,34 @@ class _AadhaarUploadViewState extends State<_AadhaarUploadView> {
                     title: 'Upload Aadhaar',
                     child: Column(
                       children: [
-                        _PreviewBox(
-                          filePath: state.filePath,
-                          networkUrl: _resolveDocumentUrl(state),
+                        _AadhaarSideUpload(
+                          title: 'Front Image',
+                          isSubmitting: state.isSubmitting,
+                          badgeStatus: state.response?.front.verificationStatus,
+                          filePath: state.frontFilePath,
+                          networkUrl: _resolveSideUrl(
+                            state.response?.front.documentUrl,
+                          ),
+                          onUpload: () =>
+                              _showSourceSheet(context, AadhaarImageSide.front),
+                          onRemove: state.hasFrontFile
+                              ? () => cubit.removeFile(AadhaarImageSide.front)
+                              : null,
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ShadowButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.coolwhite,
-                                  foregroundColor: AppColors.headingNavy,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    side: BorderSide(
-                                      color: AppColors.gray.shade200,
-                                    ),
-                                  ),
-                                ),
-                                onPressed: () => _showSourceSheet(context),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.upload_file_rounded),
-                                    SizedBox(width: 8),
-                                    Text('Upload Aadhaar'),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (state.hasFile) ...[
-                              const SizedBox(width: 10),
-                              IconButton(
-                                tooltip: 'Remove',
-                                onPressed: state.isSubmitting
-                                    ? null
-                                    : cubit.removeFile,
-                                icon: const Icon(Icons.close_rounded),
-                              ),
-                            ],
-                          ],
+                        const SizedBox(height: 14),
+                        _AadhaarSideUpload(
+                          title: 'Back Image',
+                          isSubmitting: state.isSubmitting,
+                          badgeStatus: state.response?.back.verificationStatus,
+                          filePath: state.backFilePath,
+                          networkUrl: _resolveSideUrl(
+                            state.response?.back.documentUrl,
+                          ),
+                          onUpload: () =>
+                              _showSourceSheet(context, AadhaarImageSide.back),
+                          onRemove: state.hasBackFile
+                              ? () => cubit.removeFile(AadhaarImageSide.back)
+                              : null,
                         ),
                       ],
                     ),
@@ -160,27 +146,53 @@ class _AadhaarUploadViewState extends State<_AadhaarUploadView> {
                           Row(
                             children: [
                               const Text(
-                                'Verification',
+                                'Front',
                                 style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                               const Spacer(),
                               _StatusBadge(
-                                status: state.response!.verificationStatus,
+                                status: state.response!.front.verificationStatus,
                               ),
                             ],
                           ),
                           const SizedBox(height: 10),
+                          Text(
+                            'Front URL: ${state.response!.front.documentUrl}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.gray.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Text(
+                                'Back',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const Spacer(),
+                              _StatusBadge(
+                                status: state.response!.back.verificationStatus,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Back URL: ${state.response!.back.documentUrl}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.gray.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           Text(
                             'Document Type: ${state.response!.documentType}',
                             style: TextStyle(color: AppColors.gray.shade700),
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Document URL: ${state.response!.documentUrl}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.gray.shade600,
-                            ),
+                            'Request ID: ${state.response!.requestId}',
+                            style: TextStyle(color: AppColors.gray.shade700),
                           ),
                         ],
                       ),
@@ -241,16 +253,19 @@ class _AadhaarUploadViewState extends State<_AadhaarUploadView> {
     );
   }
 
-  String? _resolveDocumentUrl(AadhaarUploadState state) {
-    final resp = state.response;
-    if (resp == null || resp.documentUrl.trim().isEmpty) return null;
-    final raw = resp.documentUrl.trim();
+  String? _resolveSideUrl(String? rawUrl) {
+    if (rawUrl == null) return null;
+    final raw = rawUrl.trim();
+    if (raw.isEmpty) return null;
     final uri = Uri.tryParse(raw);
     if (uri != null && uri.hasScheme) return raw;
     return ApiConfig.resolve(raw).toString();
   }
 
-  Future<void> _showSourceSheet(BuildContext context) async {
+  Future<void> _showSourceSheet(
+    BuildContext context,
+    AadhaarImageSide side,
+  ) async {
     final cubit = context.read<AadhaarUploadCubit>();
     await showModalBottomSheet<void>(
       context: context,
@@ -277,7 +292,7 @@ class _AadhaarUploadViewState extends State<_AadhaarUploadView> {
                 title: const Text('Camera'),
                 onTap: () {
                   Navigator.of(ctx).pop();
-                  cubit.pickFromCamera();
+                  cubit.pickFromCamera(side);
                 },
               ),
               ListTile(
@@ -285,7 +300,7 @@ class _AadhaarUploadViewState extends State<_AadhaarUploadView> {
                 title: const Text('Gallery'),
                 onTap: () {
                   Navigator.of(ctx).pop();
-                  cubit.pickFromGallery();
+                  cubit.pickFromGallery(side);
                 },
               ),
               const SizedBox(height: 8),
@@ -293,6 +308,86 @@ class _AadhaarUploadViewState extends State<_AadhaarUploadView> {
           ),
         );
       },
+    );
+  }
+}
+
+class _AadhaarSideUpload extends StatelessWidget {
+  const _AadhaarSideUpload({
+    required this.title,
+    required this.isSubmitting,
+    required this.badgeStatus,
+    required this.filePath,
+    required this.networkUrl,
+    required this.onUpload,
+    required this.onRemove,
+  });
+
+  final String title;
+  final bool isSubmitting;
+  final String? badgeStatus;
+  final String? filePath;
+  final String? networkUrl;
+  final VoidCallback onUpload;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.headingNavy,
+              ),
+            ),
+            const Spacer(),
+            if (badgeStatus != null && badgeStatus!.trim().isNotEmpty)
+              _StatusBadge(status: badgeStatus!.trim()),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _PreviewBox(filePath: filePath, networkUrl: networkUrl),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: ShadowButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.coolwhite,
+                  foregroundColor: AppColors.headingNavy,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: AppColors.gray.shade200),
+                  ),
+                ),
+                onPressed: onUpload,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.upload_file_rounded),
+                    SizedBox(width: 8),
+                    Text('Upload'),
+                  ],
+                ),
+              ),
+            ),
+            if (onRemove != null) ...[
+              const SizedBox(width: 10),
+              IconButton(
+                tooltip: 'Remove',
+                onPressed: isSubmitting ? null : onRemove,
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 }
