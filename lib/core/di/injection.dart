@@ -29,7 +29,9 @@ import 'package:goapp/features/auth/presentation/cubit/login_form_cubit.dart';
 import 'package:goapp/features/auth/presentation/cubit/otp_cubit.dart';
 import 'package:goapp/features/about/presentation/cubit/about_cubit.dart';
 import 'package:goapp/features/home/data/datasources/captain_remote_data_source.dart';
+import 'package:goapp/features/home/data/datasources/driver_status_remote_data_source.dart';
 import 'package:goapp/features/home/data/datasources/online_hours_mock_api.dart';
+import 'package:goapp/features/home/data/datasources/ride_expire_remote_data_source.dart';
 import 'package:goapp/features/home/data/repositories/captain_repository_impl.dart';
 import 'package:goapp/features/home/domain/repositories/captain_repository.dart';
 import 'package:goapp/features/home/domain/usecases/get_captain_profile.dart';
@@ -263,6 +265,12 @@ void _registerHome() {
     ..registerLazySingleton<CaptainRemoteDataSource>(
       () => CaptainRemoteDataSourceImpl(),
     )
+    ..registerLazySingleton<DriverStatusRemoteDataSource>(
+      () => DriverStatusRemoteDataSourceImpl(),
+    )
+    ..registerLazySingleton<RideExpireRemoteDataSource>(
+      () => RideExpireRemoteDataSourceImpl(),
+    )
     ..registerLazySingleton<CaptainRepository>(
       () => CaptainRepositoryImpl(sl<CaptainRemoteDataSource>()),
     )
@@ -271,13 +279,19 @@ void _registerHome() {
     )
     ..registerFactory<HomeCubit>(() => HomeCubit(sl<GetCaptainProfile>()))
     ..registerFactory<DriverCubit>(
-      () => DriverCubit(locationGuard: sl(), onlineHoursApi: sl()),
+      () => DriverCubit(
+        locationGuard: sl(),
+        driverStatusApi: sl(),
+        onlineHoursApi: sl(),
+      ),
     )
     ..registerFactory<DriverStatusCubit>(
       () => DriverStatusCubit(locationGuard: sl()),
     )
     ..registerFactory<TripNavigationCubit>(() => TripNavigationCubit())
-    ..registerFactory<AvailableOrdersCubit>(() => AvailableOrdersCubit())
+    ..registerFactory<AvailableOrdersCubit>(
+      () => AvailableOrdersCubit(rideExpireApi: sl()),
+    )
     ..registerFactory<EnterRideCodeCubit>(() => EnterRideCodeCubit());
 }
 

@@ -10,6 +10,7 @@ import 'package:goapp/features/home/presentation/pages/available_orders_page.dar
 import 'package:goapp/features/home/presentation/widgets/home_no_device_back.dart';
 import 'package:goapp/core/storage/registration_progress_store.dart';
 import 'package:goapp/core/di/injection.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 
 import '../cubit/driver_status_cubit.dart';
 import '../cubit/driver_status_state.dart';
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _lastNavigationToken = 0;
   int _lastShownBlockEventId = -1;
+  int _lastShownSnackEventId = -1;
   int _permissionDeniedAttempts = 0;
   late final LocationPermissionGuard _locationGuard;
   Timer? _locationSyncTimer;
@@ -92,6 +94,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => AvailableOrdersPage()),
           );
+        }
+
+        if (state.snackbarMessageEventId != _lastShownSnackEventId) {
+          _lastShownSnackEventId = state.snackbarMessageEventId;
+          final String? message = state.snackbarMessage;
+          if (message != null && message.trim().isNotEmpty) {
+            SnackBarUtils.show(context, message.trim());
+          }
         }
 
         if (state.offlineBlockIssue != null &&

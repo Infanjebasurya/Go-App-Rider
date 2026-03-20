@@ -40,4 +40,10 @@ class Env {
   static const String googleGeocodingApiKey = String.fromEnvironment(
     'GOOGLE_GEOCODING_API_KEY',
   );
+
+  /// Server-to-server / admin endpoints that require an admin bearer token.
+  /// Supply via `--dart-define=ADMIN_BEARER_TOKEN=...` for builds that need it.
+  static const String adminBearerToken = String.fromEnvironment(
+    'ADMIN_BEARER_TOKEN',
+  );
 }

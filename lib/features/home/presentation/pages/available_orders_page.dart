@@ -18,6 +18,7 @@ import 'package:goapp/features/home/presentation/cubit/available_orders_state.da
 import 'package:goapp/features/home/presentation/pages/ride_arrived_page.dart';
 import 'package:goapp/core/widgets/shadow_button.dart';
 import 'package:goapp/core/di/injection.dart';
+import 'package:goapp/features/auth/presentation/widgets/snackbar_utils.dart';
 
 class AvailableOrdersPage extends StatefulWidget {
   const AvailableOrdersPage({super.key});
@@ -276,17 +277,30 @@ class _AvailableOrdersPageState extends State<AvailableOrdersPage>
   Widget build(BuildContext context) {
     return BlocProvider<AvailableOrdersCubit>.value(
       value: _ordersCubit,
-      child: BlocListener<AvailableOrdersCubit, AvailableOrdersState>(
-        listenWhen: (previous, current) =>
-            _canReceiveOrders &&
-            !_acceptedOrder &&
-            previous.activeOrderIndex != current.activeOrderIndex &&
-            current.activeOrderIndex > 0,
-        listener: (context, state) {
-          if (_acceptedOrder) return;
-          // B-09 FIX: explicitly mark Future as unawaited.
-          unawaited(_playIncomingOrderAlert());
-        },
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<AvailableOrdersCubit, AvailableOrdersState>(
+            listenWhen: (previous, current) =>
+                _canReceiveOrders &&
+                !_acceptedOrder &&
+                previous.activeOrderIndex != current.activeOrderIndex &&
+                current.activeOrderIndex > 0,
+            listener: (context, state) {
+              if (_acceptedOrder) return;
+              // B-09 FIX: explicitly mark Future as unawaited.
+              unawaited(_playIncomingOrderAlert());
+            },
+          ),
+          BlocListener<AvailableOrdersCubit, AvailableOrdersState>(
+            listenWhen: (previous, current) =>
+                previous.snackbarMessageEventId != current.snackbarMessageEventId,
+            listener: (context, state) {
+              final String? message = state.snackbarMessage;
+              if (message == null || message.trim().isEmpty) return;
+              SnackBarUtils.show(context, message.trim());
+            },
+          ),
+        ],
         child: Scaffold(
           backgroundColor: AppColors.surfaceF5,
           appBar: AppAppBar(
@@ -301,6 +315,54 @@ class _AvailableOrdersPageState extends State<AvailableOrdersPage>
           body: BlocBuilder<AvailableOrdersCubit, AvailableOrdersState>(
             builder: (BuildContext context, AvailableOrdersState state) {
               final cubit = _ordersCubit;
+              if (state.isExpired) {
+                final String message = (state.expireMessage ?? 'Ride expired')
+                    .trim()
+                    .isEmpty
+                    ? 'Ride expired'
+                    : state.expireMessage!.trim();
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Text(
+                          'Expired',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.neutral333,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          message,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            height: 1.35,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.neutral666,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          height: 44,
+                          width: 160,
+                          child: FilledButton(
+                            onPressed: () => cubit.retry(),
+                            child: const Text('Retry'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final bool canInteract =
+                  _canReceiveOrders && !state.isExpiring && !state.isExpired;
               const LatLng firstPickup = LatLng(13.0696, 80.2154);
               const LatLng firstDrop = LatLng(13.0744, 80.2241);
               const LatLng secondPickup = LatLng(13.0721, 80.2186);
@@ -342,12 +404,12 @@ class _AvailableOrdersPageState extends State<AvailableOrdersPage>
                     dropAddress:
                         '13, vinobaji St, Kamarajar Nagar, NGO\nColonyCholaimedu, Ch-94',
                     progress: _canReceiveOrders ? cubit.progressForOrder(0) : 0,
-                    isEnabled: _canReceiveOrders,
+                    isEnabled: canInteract,
                     distanceLabel: _formatDistanceKm(firstTripKm),
                     etaLabel: _estimateEtaLabelFromKm(firstPickupKm),
                     pickupDistanceLabel: _formatDistanceKm(firstPickupKm),
                     dropDistanceLabel: _formatDistanceKm(firstTripKm),
-                    onDecline: _canReceiveOrders
+                    onDecline: canInteract
                         ? () {
                             unawaited(_handleDeclineTap());
                           }
@@ -377,12 +439,12 @@ class _AvailableOrdersPageState extends State<AvailableOrdersPage>
                     dropAddress:
                         '13, vinobaji St, Kamarajar Nagar, NGO\nColonyCholaimedu, Ch-94',
                     progress: _canReceiveOrders ? cubit.progressForOrder(1) : 0,
-                    isEnabled: _canReceiveOrders,
+                    isEnabled: canInteract,
                     distanceLabel: _formatDistanceKm(secondTripKm),
                     etaLabel: _estimateEtaLabelFromKm(secondPickupKm),
                     pickupDistanceLabel: _formatDistanceKm(secondPickupKm),
                     dropDistanceLabel: _formatDistanceKm(secondTripKm),
-                    onDecline: _canReceiveOrders
+                    onDecline: canInteract
                         ? () {
                             unawaited(_handleDeclineTap());
                           }
@@ -411,12 +473,12 @@ class _AvailableOrdersPageState extends State<AvailableOrdersPage>
                     dropTitle: 'Madurai',
                     dropAddress: 'Madurai, Tamil Nadu',
                     progress: _canReceiveOrders ? cubit.progressForOrder(2) : 0,
-                    isEnabled: _canReceiveOrders,
+                    isEnabled: canInteract,
                     distanceLabel: _formatDistanceKm(thirdTripKm),
                     etaLabel: _estimateEtaLabelFromKm(thirdPickupKm),
                     pickupDistanceLabel: _formatDistanceKm(thirdPickupKm),
                     dropDistanceLabel: _formatDistanceKm(thirdTripKm),
-                    onDecline: _canReceiveOrders
+                    onDecline: canInteract
                         ? () {
                             unawaited(_handleDeclineTap());
                           }
@@ -443,12 +505,12 @@ class _AvailableOrdersPageState extends State<AvailableOrdersPage>
                     dropTitle: 'Rayapuram',
                     dropAddress: 'Rayapuram, Tiruppur',
                     progress: _canReceiveOrders ? cubit.progressForOrder(3) : 0,
-                    isEnabled: _canReceiveOrders,
+                    isEnabled: canInteract,
                     distanceLabel: _formatDistanceKm(fourthTripKm),
                     etaLabel: _estimateEtaLabelFromKm(fourthPickupKm),
                     pickupDistanceLabel: _formatDistanceKm(fourthPickupKm),
                     dropDistanceLabel: _formatDistanceKm(fourthTripKm),
-                    onDecline: _canReceiveOrders
+                    onDecline: canInteract
                         ? () {
                             unawaited(_handleDeclineTap());
                           }
@@ -712,7 +774,7 @@ class _OrderCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(24),
                         ),
                       ),
-                      onPressed: onAccept,
+                      onPressed: isEnabled ? onAccept : null,
                       child: const Text(
                         'Accept Order',
                         style: TextStyle(

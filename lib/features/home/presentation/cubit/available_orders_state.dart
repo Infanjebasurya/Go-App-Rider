@@ -8,6 +8,11 @@ class AvailableOrdersState extends Equatable {
     this.showSecondOrder = false,
     this.showThirdOrder = false,
     this.showFourthOrder = false,
+    this.isExpiring = false,
+    this.isExpired = false,
+    this.expireMessage,
+    this.snackbarMessage,
+    this.snackbarMessageEventId = 0,
   });
 
   final int activeOrderIndex;
@@ -16,6 +21,11 @@ class AvailableOrdersState extends Equatable {
   final bool showSecondOrder;
   final bool showThirdOrder;
   final bool showFourthOrder;
+  final bool isExpiring;
+  final bool isExpired;
+  final String? expireMessage;
+  final String? snackbarMessage;
+  final int snackbarMessageEventId;
 
   AvailableOrdersState copyWith({
     int? activeOrderIndex,
@@ -24,6 +34,12 @@ class AvailableOrdersState extends Equatable {
     bool? showSecondOrder,
     bool? showThirdOrder,
     bool? showFourthOrder,
+    bool? isExpiring,
+    bool? isExpired,
+    String? expireMessage,
+    String? snackbarMessage,
+    int? snackbarMessageEventId,
+    bool clearExpireMessage = false,
   }) {
     return AvailableOrdersState(
       activeOrderIndex: activeOrderIndex ?? this.activeOrderIndex,
@@ -32,6 +48,14 @@ class AvailableOrdersState extends Equatable {
       showSecondOrder: showSecondOrder ?? this.showSecondOrder,
       showThirdOrder: showThirdOrder ?? this.showThirdOrder,
       showFourthOrder: showFourthOrder ?? this.showFourthOrder,
+      isExpiring: isExpiring ?? this.isExpiring,
+      isExpired: isExpired ?? this.isExpired,
+      expireMessage: clearExpireMessage
+          ? null
+          : (expireMessage ?? this.expireMessage),
+      snackbarMessage: snackbarMessage ?? this.snackbarMessage,
+      snackbarMessageEventId:
+          snackbarMessageEventId ?? this.snackbarMessageEventId,
     );
   }
 
@@ -43,5 +67,10 @@ class AvailableOrdersState extends Equatable {
     showSecondOrder,
     showThirdOrder,
     showFourthOrder,
+    isExpiring,
+    isExpired,
+    expireMessage ?? '',
+    snackbarMessage ?? '',
+    snackbarMessageEventId,
   ];
 }

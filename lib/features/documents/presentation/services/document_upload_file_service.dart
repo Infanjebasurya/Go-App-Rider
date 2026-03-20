@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'dart:typed_data';
 
 import 'package:goapp/core/service/image_picker_service.dart';
 import 'package:goapp/core/service/permission_service.dart';
 import 'package:goapp/core/service/path_provider_service.dart';
+import 'package:image/image.dart' as img;
 
 class DocumentUploadFileService {
   DocumentUploadFileService({
@@ -86,6 +88,24 @@ class DocumentUploadFileService {
     }
   }
 
+  Future<ui.Size?> tryDecodeImageSizeBytes(Uint8List bytes) async {
+    try {
+      if (bytes.isEmpty) return null;
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      final ui.Image image = frame.image;
+      final ui.Size size = ui.Size(
+        image.width.toDouble(),
+        image.height.toDouble(),
+      );
+      image.dispose();
+      codec.dispose();
+      return size;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<String?> validateCr80CardImage(String path) async {
     final ui.Size? size = await tryDecodeImageSize(path);
     if (size == null) {
@@ -100,6 +120,126 @@ class DocumentUploadFileService {
       return 'Card photo must match CR80 size (85.6mm × 54mm).';
     }
     return null;
+  }
+
+  Future<String?> validateCr80CardBytes(Uint8List bytes) async {
+    final ui.Size? size = await tryDecodeImageSizeBytes(bytes);
+    if (size == null) {
+      return 'Unable to read image size. Please upload a clear card photo.';
+    }
+    final bool ok = validateAspectRatio(
+      widthPx: size.width.round(),
+      heightPx: size.height.round(),
+      target: cr80AspectRatio,
+    );
+    if (!ok) {
+      return 'Card photo must match CR80 size (85.6mm Ã— 54mm).';
+    }
+    return null;
+  }
+
+  Future<Uint8List> optimizeToJpegUnderMaxBytes(
+    Uint8List inputBytes, {
+    int maxOutputBytes = maxBytes,
+    int initialQuality = 92,
+    int minQuality = 62,
+    int qualityStep = 6,
+    int minLongestSidePx = 900,
+  }) async {
+    final img.Image? decoded = img.decodeImage(inputBytes);
+    if (decoded == null) return inputBytes;
+
+    img.Image working = decoded;
+    int quality = initialQuality.clamp(1, 100);
+    Uint8List encoded = Uint8List.fromList(
+      img.encodeJpg(working, quality: quality),
+    );
+
+    while (encoded.length > maxOutputBytes && quality > minQuality) {
+      quality = (quality - qualityStep).clamp(minQuality, 100);
+      encoded = Uint8List.fromList(img.encodeJpg(working, quality: quality));
+    }
+
+    int guard = 0;
+    while (encoded.length > maxOutputBytes &&
+        guard < 6 &&
+        math.max(working.width, working.height) > minLongestSidePx) {
+      guard++;
+      final int longest = math.max(working.width, working.height);
+      final int nextLongest = (longest * 0.85).round().clamp(
+        minLongestSidePx,
+        longest,
+      );
+      if (nextLongest >= longest) break;
+      working = (working.width >= working.height)
+          ? img.copyResize(working, width: nextLongest)
+          : img.copyResize(working, height: nextLongest);
+      encoded = Uint8List.fromList(img.encodeJpg(working, quality: quality));
+    }
+
+    return encoded;
+  }
+
+  Future<String> persistJpegBytesToAppStorage(
+    Uint8List bytes, {
+    required String prefix,
+  }) async {
+    return persistImageBytesToAppStorage(bytes, prefix: prefix, extension: '.jpg');
+  }
+
+  Future<String> persistImageBytesToAppStorage(
+    Uint8List bytes, {
+    required String prefix,
+    String? extension,
+  }) async {
+    final String resolvedExt = (extension ?? _sniffImageExtension(bytes)).trim();
+    final String safeExt = resolvedExt.startsWith('.') ? resolvedExt : '.$resolvedExt';
+
+    try {
+      final directory = await _pathProvider.getApplicationDocumentsDirectory();
+      final uploadsDir = Directory(
+        '${directory.path}${Platform.pathSeparator}document_uploads',
+      );
+      if (!await uploadsDir.exists()) {
+        await uploadsDir.create(recursive: true);
+      }
+
+      final targetPath =
+          '${uploadsDir.path}${Platform.pathSeparator}${prefix}_${DateTime.now().millisecondsSinceEpoch}$safeExt';
+      final file = File(targetPath);
+      await file.writeAsBytes(bytes, flush: true);
+      return file.path;
+    } catch (_) {
+      final Directory systemTemp = Directory.systemTemp;
+      final String fallback =
+          '${systemTemp.path}${Platform.pathSeparator}${prefix}_${DateTime.now().millisecondsSinceEpoch}$safeExt';
+      await File(fallback).writeAsBytes(bytes, flush: true);
+      return fallback;
+    }
+  }
+
+  Future<Uint8List?> readImageBytesForCropping(String path) async {
+    try {
+      final Uint8List bytes = await File(path).readAsBytes();
+      if (bytes.isEmpty) return null;
+
+      if (img.decodeImage(bytes) != null) {
+        return bytes;
+      }
+
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      final ui.Image image = frame.image;
+      final ByteData? data = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      image.dispose();
+      codec.dispose();
+      if (data == null) return bytes;
+      return data.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<String> persistImageToAppStorage(
@@ -170,5 +310,32 @@ class DocumentUploadFileService {
     final dotIndex = path.lastIndexOf('.');
     if (dotIndex < 0 || dotIndex == path.length - 1) return '.jpg';
     return path.substring(dotIndex);
+  }
+
+  String _sniffImageExtension(Uint8List bytes) {
+    if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) return '.jpg';
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47 &&
+        bytes[4] == 0x0D &&
+        bytes[5] == 0x0A &&
+        bytes[6] == 0x1A &&
+        bytes[7] == 0x0A) {
+      return '.png';
+    }
+    if (bytes.length >= 12 &&
+        bytes[0] == 0x52 &&
+        bytes[1] == 0x49 &&
+        bytes[2] == 0x46 &&
+        bytes[3] == 0x46 &&
+        bytes[8] == 0x57 &&
+        bytes[9] == 0x45 &&
+        bytes[10] == 0x42 &&
+        bytes[11] == 0x50) {
+      return '.webp';
+    }
+    return '.jpg';
   }
 }

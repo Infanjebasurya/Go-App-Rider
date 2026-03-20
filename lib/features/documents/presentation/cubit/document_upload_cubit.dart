@@ -1,6 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goapp/core/service/file_picker_service.dart';
 import 'package:goapp/core/service/image_picker_service.dart';
@@ -14,6 +15,7 @@ import 'package:goapp/features/documents/data/datasources/profile_image_upload_r
 import 'package:goapp/features/documents/data/datasources/vehicle_rc_upload_remote_data_source.dart';
 
 import '../model/document_upload_model.dart';
+import '../pages/document_image_crop_page.dart';
 import '../services/document_number_rules.dart';
 import '../services/document_upload_file_service.dart';
 import '../../../document_verify/presentation/model/document_model.dart';
@@ -181,24 +183,33 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     return DocumentUploadType.image;
   }
 
-  Future<void> captureProfilePhoto({required AppImageSource source}) {
-    return _captureProfilePhoto(this, source: source);
+  Future<void> captureProfilePhoto(
+    {required AppImageSource source, BuildContext? context}
+  ) {
+    final NavigatorState? navigator = context != null ? Navigator.of(context) : null;
+    return _captureProfilePhoto(this, navigator: navigator, source: source);
   }
 
   Future<void> setProfilePhotoFromPath(String path) {
     return _setProfilePhotoFromPath(this, path: path);
   }
 
-  Future<void> captureFront({required AppImageSource source}) {
-    return _captureFront(this, source: source);
+  Future<void> captureFront(
+    {required AppImageSource source, BuildContext? context}
+  ) {
+    final NavigatorState? navigator = context != null ? Navigator.of(context) : null;
+    return _captureFront(this, navigator: navigator, source: source);
   }
 
   Future<void> captureFrontDocument() {
     return _captureFrontDocument(this);
   }
 
-  Future<void> captureBack({required AppImageSource source}) {
-    return _captureBack(this, source: source);
+  Future<void> captureBack(
+    {required AppImageSource source, BuildContext? context}
+  ) {
+    final NavigatorState? navigator = context != null ? Navigator.of(context) : null;
+    return _captureBack(this, navigator: navigator, source: source);
   }
 
   Future<void> captureBackDocument() {
@@ -285,8 +296,11 @@ class DocumentUploadCubit extends Cubit<DocumentUploadState> {
     emit(state.copyWith(bankData: updated));
   }
 
-  Future<void> captureBankDocument({required AppImageSource source}) {
-    return _captureBankDocument(this, source: source);
+  Future<void> captureBankDocument(
+    {required AppImageSource source, BuildContext? context}
+  ) {
+    final NavigatorState? navigator = context != null ? Navigator.of(context) : null;
+    return _captureBankDocument(this, navigator: navigator, source: source);
   }
 
   Future<void> captureBankDocumentFile() {

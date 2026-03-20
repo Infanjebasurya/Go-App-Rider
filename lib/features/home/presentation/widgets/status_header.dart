@@ -33,7 +33,10 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: () => Scaffold.of(context).openDrawer(),
             ),
           ),
-          title: _ToggleSwitch(isOnline: state.isOnline),
+          title: _ToggleSwitch(
+            isOnline: state.isOnline,
+            isBusy: state.isStatusUpdating,
+          ),
           centerTitle: true,
           actions: [
             IconButton(
@@ -58,25 +61,32 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 class _ToggleSwitch extends StatelessWidget {
   final bool isOnline;
+  final bool isBusy;
 
-  const _ToggleSwitch({required this.isOnline});
+  const _ToggleSwitch({required this.isOnline, required this.isBusy});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => unawaited(context.read<DriverCubit>().toggleStatus()),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.hexFFF0F0F0,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        padding: const EdgeInsets.all(3),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _Tab(label: 'Offline', isSelected: !isOnline),
-            _Tab(label: 'Online', isSelected: isOnline),
-          ],
+    return IgnorePointer(
+      ignoring: isBusy,
+      child: Opacity(
+        opacity: isBusy ? 0.65 : 1,
+        child: GestureDetector(
+          onTap: () => unawaited(context.read<DriverCubit>().toggleStatus()),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.hexFFF0F0F0,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _Tab(label: 'Offline', isSelected: !isOnline),
+                _Tab(label: 'Online', isSelected: isOnline),
+              ],
+            ),
+          ),
         ),
       ),
     );

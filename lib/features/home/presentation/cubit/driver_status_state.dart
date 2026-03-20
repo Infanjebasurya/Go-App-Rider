@@ -8,6 +8,7 @@ const double kMinimumDutyWalletBalance = -50.0;
 @immutable
 class DriverState {
   final DriverStatus status;
+  final bool isStatusUpdating;
   final double totalEarnings;
   final int tripsCompleted;
   final String onlineHours;
@@ -21,9 +22,12 @@ class DriverState {
   final int offlineBlockEventId;
   final int lowWalletBlockEventId;
   final bool showLowWalletWarning;
+  final String? snackbarMessage;
+  final int snackbarMessageEventId;
 
   const DriverState({
     this.status = DriverStatus.offline,
+    this.isStatusUpdating = false,
     this.totalEarnings = 0.0,
     this.tripsCompleted = 0,
     this.onlineHours = '0h 0m',
@@ -37,6 +41,8 @@ class DriverState {
     this.offlineBlockEventId = 0,
     this.lowWalletBlockEventId = 0,
     this.showLowWalletWarning = false,
+    this.snackbarMessage,
+    this.snackbarMessageEventId = 0,
   });
 
   bool get isOnline => status == DriverStatus.online;
@@ -53,6 +59,7 @@ class DriverState {
 
   DriverState copyWith({
     DriverStatus? status,
+    bool? isStatusUpdating,
     double? totalEarnings,
     int? tripsCompleted,
     String? onlineHours,
@@ -66,10 +73,13 @@ class DriverState {
     int? offlineBlockEventId,
     int? lowWalletBlockEventId,
     bool? showLowWalletWarning,
+    String? snackbarMessage,
+    int? snackbarMessageEventId,
     bool clearOfflineBlockIssue = false,
   }) {
     return DriverState(
       status: status ?? this.status,
+      isStatusUpdating: isStatusUpdating ?? this.isStatusUpdating,
       totalEarnings: totalEarnings ?? this.totalEarnings,
       tripsCompleted: tripsCompleted ?? this.tripsCompleted,
       onlineHours: onlineHours ?? this.onlineHours,
@@ -87,6 +97,9 @@ class DriverState {
       lowWalletBlockEventId:
           lowWalletBlockEventId ?? this.lowWalletBlockEventId,
       showLowWalletWarning: showLowWalletWarning ?? this.showLowWalletWarning,
+      snackbarMessage: snackbarMessage ?? this.snackbarMessage,
+      snackbarMessageEventId:
+          snackbarMessageEventId ?? this.snackbarMessageEventId,
     );
   }
 }

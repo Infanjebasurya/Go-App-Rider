@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:goapp/core/storage/driver_id_store.dart';
 import 'package:goapp/core/storage/driver_wallet_store.dart';
 import 'package:goapp/core/location/location_permission_guard.dart';
 import 'package:goapp/core/storage/online_hours_store.dart';
 import 'package:goapp/core/storage/ride_history_store.dart';
 import 'package:goapp/core/utils/earnings_calculator.dart';
+import 'package:goapp/features/home/data/datasources/driver_status_remote_data_source.dart';
 import 'package:goapp/features/home/data/datasources/online_hours_mock_api.dart';
 
 import 'driver_status_state.dart';
@@ -12,14 +14,17 @@ import 'driver_status_state.dart';
 class DriverCubit extends Cubit<DriverState> {
   DriverCubit({
     LocationPermissionGuard? locationGuard,
+    DriverStatusRemoteDataSource? driverStatusApi,
     OnlineHoursMockApi? onlineHoursApi,
     double minimumDutyWalletBalance = kMinimumDutyWalletBalance,
   }) : _locationGuard = locationGuard ?? const LocationPermissionGuard(),
+       _driverStatusApi = driverStatusApi ?? DriverStatusRemoteDataSourceImpl(),
        _onlineHoursApi = onlineHoursApi ?? const OnlineHoursMockApi(),
        _minimumDutyWalletBalance = minimumDutyWalletBalance,
        super(const DriverState());
 
   final LocationPermissionGuard _locationGuard;
+  final DriverStatusRemoteDataSource _driverStatusApi;
   final OnlineHoursMockApi _onlineHoursApi;
   final double _minimumDutyWalletBalance;
   Timer? _onlineTimer;
@@ -113,14 +118,39 @@ class DriverCubit extends Cubit<DriverState> {
   }
 
   Future<void> toggleStatus() async {
-    if (state.isOnline) {
-      goOffline();
-    } else {
-      await goOnline();
+    if (state.isStatusUpdating) return;
+
+    final String driverId = (DriverIdStore.driverId() ?? '').trim();
+    if (driverId.isEmpty) {
+      _emitSnack('Driver ID missing. Please complete profile setup.');
+      return;
     }
+
+    if (state.isOnline) {
+      emit(state.copyWith(isStatusUpdating: true));
+      try {
+        final response = await _driverStatusApi.updateStatus(
+          driverId: driverId,
+          status: 'offline',
+        );
+        goOffline();
+        _emitSnack(
+          (response.message ?? '').trim().isNotEmpty
+              ? response.message!.trim()
+              : 'Driver is now offline',
+        );
+      } catch (error) {
+        if (isClosed) return;
+        emit(state.copyWith(isStatusUpdating: false));
+        _emitSnack(_errorMessage(error));
+      }
+      return;
+    }
+
+    await goOnline(notifyServer: true);
   }
 
-  Future<void> goOnline() async {
+  Future<void> goOnline({bool notifyServer = false}) async {
     if (state.isOnline) return;
     await _bootstrapOnlineHoursIfNeeded();
 
@@ -149,6 +179,31 @@ class DriverCubit extends Cubit<DriverState> {
       return;
     }
 
+    if (notifyServer) {
+      final String driverId = (DriverIdStore.driverId() ?? '').trim();
+      if (driverId.isEmpty) {
+        _emitSnack('Driver ID missing. Please complete profile setup.');
+        return;
+      }
+
+      emit(state.copyWith(isStatusUpdating: true));
+      try {
+        final response = await _driverStatusApi.updateStatus(
+          driverId: driverId,
+          status: 'online',
+        );
+        final String message = (response.message ?? '').trim().isNotEmpty
+            ? response.message!.trim()
+            : 'Driver is now online';
+        _emitSnack(message);
+      } catch (error) {
+        if (isClosed) return;
+        emit(state.copyWith(isStatusUpdating: false));
+        _emitSnack(_errorMessage(error));
+        return;
+      }
+    }
+
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
     _onlineSessionStartEpochMs = nowMs;
     await OnlineHoursStore.saveActiveSessionStartEpochMs(nowMs);
@@ -157,6 +212,7 @@ class DriverCubit extends Cubit<DriverState> {
     emit(
       state.copyWith(
         status: DriverStatus.online,
+        isStatusUpdating: false,
         onlineHours: _formatMinutes(_effectiveOnlineMinutesNow()),
         clearOfflineBlockIssue: true,
       ),
@@ -176,6 +232,7 @@ class DriverCubit extends Cubit<DriverState> {
     emit(
       state.copyWith(
         status: DriverStatus.offline,
+        isStatusUpdating: false,
         onlineHours: _formatMinutes(_effectiveOnlineMinutesNow()),
         offlineBlockIssue: reason,
         offlineBlockEventId: reason == null
@@ -183,6 +240,23 @@ class DriverCubit extends Cubit<DriverState> {
             : state.offlineBlockEventId + 1,
       ),
     );
+  }
+
+  void _emitSnack(String message) {
+    final String trimmed = message.trim();
+    if (trimmed.isEmpty || isClosed) return;
+    emit(
+      state.copyWith(
+        snackbarMessage: trimmed,
+        snackbarMessageEventId: state.snackbarMessageEventId + 1,
+      ),
+    );
+  }
+
+  String _errorMessage(Object error) {
+    final String raw = error.toString();
+    const String prefix = 'Exception: ';
+    return raw.startsWith(prefix) ? raw.substring(prefix.length) : raw;
   }
 
   void _startTimer() {

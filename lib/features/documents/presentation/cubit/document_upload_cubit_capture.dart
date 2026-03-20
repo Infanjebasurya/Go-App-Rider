@@ -102,6 +102,7 @@ Future<void> _setProfilePhotoFromPath(
 
 Future<void> _captureProfilePhoto(
   DocumentUploadCubit cubit, {
+  required NavigatorState? navigator,
   required AppImageSource source,
 }) async {
   if (cubit.state.isCurrentStepBank || !cubit.state.isCurrentStepProfile) {
@@ -136,27 +137,18 @@ Future<void> _captureProfilePhoto(
   cubit._isPicking = true;
   cubit._emitState(cubit.state.copyWith(isProfileImageProcessing: true));
   try {
-    final picked = await _pickImageWithOptionalCrop(
+    final Uint8List? maybeCroppedBytes = await _pickImageWithOptionalCrop(
       cubit,
+      navigator: navigator,
       source: source,
       imageQuality: 100,
     );
-    if (picked == null) return;
+    if (maybeCroppedBytes == null) return;
+    final Uint8List croppedBytes = maybeCroppedBytes;
 
-    if (!cubit._fileService.isValidImageFormat(picked.path)) {
-      cubit._emitState(
-        cubit.state.copyWithDocStep(
-          cubit.state.currentDocStep.copyWith(
-            imageError:
-                'Only JPG, PNG, HEIC, HEIF, and WEBP images are allowed.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    final sizeBytes = await cubit._fileService.resolveImageSizeBytes(picked);
-    if (!cubit._fileService.validateFileSize(sizeBytes)) {
+    final Uint8List optimized = await cubit._fileService
+        .optimizeToJpegUnderMaxBytes(croppedBytes);
+    if (!cubit._fileService.validateFileSize(optimized.length)) {
       cubit._emitState(
         cubit.state.copyWithDocStep(
           cubit.state.currentDocStep.copyWith(
@@ -167,8 +159,9 @@ Future<void> _captureProfilePhoto(
       return;
     }
 
-    final persistedPath = await cubit._fileService.persistImageToAppStorage(
-      picked.path,
+    final String persistedPath = await cubit._fileService
+        .persistImageBytesToAppStorage(
+      optimized,
       prefix: 'profile_photo',
     );
     final previousPath = cubit.state.currentDocStep.frontPath;
@@ -195,6 +188,7 @@ Future<void> _captureProfilePhoto(
 
 Future<void> _captureFront(
   DocumentUploadCubit cubit, {
+  required NavigatorState? navigator,
   required AppImageSource source,
 }) async {
   if (cubit.state.isCurrentStepBank || cubit.state.isCurrentStepProfile) return;
@@ -215,15 +209,26 @@ Future<void> _captureFront(
 
   cubit._isPicking = true;
   try {
-    final picked = await _pickImageWithOptionalCrop(
+    final bool needsCardAspect = _requiresCr80CardAspect(
+      cubit.state.currentDocStep.step,
+    );
+    final Uint8List? maybeCroppedBytes = await _pickImageWithOptionalCrop(
       cubit,
+      navigator: navigator,
       source: source,
       imageQuality: 100,
+      cardAspectRatio: needsCardAspect
+          ? DocumentUploadFileService.cr80AspectRatio
+          : null,
+      defaultToCardAspect: needsCardAspect,
+      title: 'Crop document',
     );
-    if (picked == null) return;
+    if (maybeCroppedBytes == null) return;
+    final Uint8List croppedBytes = maybeCroppedBytes;
 
-    final sizeBytes = await cubit._fileService.resolveImageSizeBytes(picked);
-    if (!cubit._fileService.validateFileSize(sizeBytes)) {
+    final Uint8List optimized = await cubit._fileService
+        .optimizeToJpegUnderMaxBytes(croppedBytes);
+    if (!cubit._fileService.validateFileSize(optimized.length)) {
       cubit._emitState(
         cubit.state.copyWithDocStep(
           cubit.state.currentDocStep.copyWith(
@@ -234,9 +239,9 @@ Future<void> _captureFront(
       return;
     }
 
-    if (_requiresCr80CardAspect(cubit.state.currentDocStep.step)) {
-      final String? ratioError = await cubit._fileService.validateCr80CardImage(
-        picked.path,
+    if (needsCardAspect) {
+      final String? ratioError = await cubit._fileService.validateCr80CardBytes(
+        optimized,
       );
       if (ratioError != null) {
         cubit._emitState(
@@ -248,8 +253,9 @@ Future<void> _captureFront(
       }
     }
 
-    final persistedPath = await cubit._fileService.persistImageToAppStorage(
-      picked.path,
+    final String persistedPath = await cubit._fileService
+        .persistImageBytesToAppStorage(
+      optimized,
       prefix: '${cubit.state.currentDocStep.step.name}_front',
     );
     final previousPath = cubit.state.currentDocStep.frontPath;
@@ -327,6 +333,7 @@ Future<void> _captureFrontDocument(DocumentUploadCubit cubit) async {
 
 Future<void> _captureBack(
   DocumentUploadCubit cubit, {
+  required NavigatorState? navigator,
   required AppImageSource source,
 }) async {
   if (cubit.state.isCurrentStepBank || cubit.state.isCurrentStepProfile) return;
@@ -347,15 +354,26 @@ Future<void> _captureBack(
 
   cubit._isPicking = true;
   try {
-    final picked = await _pickImageWithOptionalCrop(
+    final bool needsCardAspect = _requiresCr80CardAspect(
+      cubit.state.currentDocStep.step,
+    );
+    final Uint8List? maybeCroppedBytes = await _pickImageWithOptionalCrop(
       cubit,
+      navigator: navigator,
       source: source,
       imageQuality: 100,
+      cardAspectRatio: needsCardAspect
+          ? DocumentUploadFileService.cr80AspectRatio
+          : null,
+      defaultToCardAspect: needsCardAspect,
+      title: 'Crop document',
     );
-    if (picked == null) return;
+    if (maybeCroppedBytes == null) return;
+    final Uint8List croppedBytes = maybeCroppedBytes;
 
-    final sizeBytes = await cubit._fileService.resolveImageSizeBytes(picked);
-    if (!cubit._fileService.validateFileSize(sizeBytes)) {
+    final Uint8List optimized = await cubit._fileService
+        .optimizeToJpegUnderMaxBytes(croppedBytes);
+    if (!cubit._fileService.validateFileSize(optimized.length)) {
       cubit._emitState(
         cubit.state.copyWithDocStep(
           cubit.state.currentDocStep.copyWith(
@@ -366,9 +384,9 @@ Future<void> _captureBack(
       return;
     }
 
-    if (_requiresCr80CardAspect(cubit.state.currentDocStep.step)) {
-      final String? ratioError = await cubit._fileService.validateCr80CardImage(
-        picked.path,
+    if (needsCardAspect) {
+      final String? ratioError = await cubit._fileService.validateCr80CardBytes(
+        optimized,
       );
       if (ratioError != null) {
         cubit._emitState(
@@ -380,8 +398,9 @@ Future<void> _captureBack(
       }
     }
 
-    final persistedPath = await cubit._fileService.persistImageToAppStorage(
-      picked.path,
+    final String persistedPath = await cubit._fileService
+        .persistImageBytesToAppStorage(
+      optimized,
       prefix: '${cubit.state.currentDocStep.step.name}_back',
     );
     final previousPath = cubit.state.currentDocStep.backPath;
@@ -493,6 +512,7 @@ Future<void> _removeBack(DocumentUploadCubit cubit) async {
 
 Future<void> _captureBankDocument(
   DocumentUploadCubit cubit, {
+  required NavigatorState? navigator,
   required AppImageSource source,
 }) async {
   if (!cubit.state.isCurrentStepBank) return;
@@ -501,15 +521,19 @@ Future<void> _captureBankDocument(
 
   cubit._isPicking = true;
   try {
-    final picked = await _pickImageWithOptionalCrop(
+    final Uint8List? maybeCroppedBytes = await _pickImageWithOptionalCrop(
       cubit,
+      navigator: navigator,
       source: source,
       imageQuality: 100,
+      title: 'Crop document',
     );
-    if (picked == null) return;
+    if (maybeCroppedBytes == null) return;
+    final Uint8List croppedBytes = maybeCroppedBytes;
 
-    final sizeBytes = await cubit._fileService.resolveImageSizeBytes(picked);
-    if (!cubit._fileService.validateFileSize(sizeBytes)) {
+    final Uint8List optimized = await cubit._fileService
+        .optimizeToJpegUnderMaxBytes(croppedBytes);
+    if (!cubit._fileService.validateFileSize(optimized.length)) {
       cubit._emitState(
         cubit.state.copyWith(
           bankData: cubit.state.bankData.copyWith(
@@ -520,8 +544,9 @@ Future<void> _captureBankDocument(
       return;
     }
 
-    final persistedPath = await cubit._fileService.persistImageToAppStorage(
-      picked.path,
+    final String persistedPath = await cubit._fileService
+        .persistImageBytesToAppStorage(
+      optimized,
       prefix: 'bank_book_front',
     );
     final previousPath = cubit.state.bankData.bankDocumentPath;
@@ -595,13 +620,49 @@ Future<void> _removeBankDocument(DocumentUploadCubit cubit) async {
   cubit._emitState(cubit.state.copyWith(bankData: updated));
 }
 
-Future<PickedImage?> _pickImageWithOptionalCrop(
+Future<Uint8List?> _pickImageWithOptionalCrop(
   DocumentUploadCubit cubit, {
+  required NavigatorState? navigator,
   required AppImageSource source,
   int imageQuality = 100,
-}) {
-  return cubit._imagePickerService.pickImage(
-    source: source,
-    imageQuality: imageQuality,
-  );
+  String title = 'Crop',
+  double? cardAspectRatio,
+  bool defaultToCardAspect = false,
+}) async {
+  while (true) {
+    final PickedImage? picked = await cubit._imagePickerService.pickImage(
+      source: source,
+      imageQuality: imageQuality,
+    );
+    if (picked == null) return null;
+
+    final Uint8List? bytes = await cubit._fileService.readImageBytesForCropping(
+      picked.path,
+    );
+    if (bytes == null) return null;
+
+    if (navigator == null) return bytes;
+    if (!navigator.mounted) return null;
+
+    final DocumentImageCropResult? result =
+        await navigator.push<DocumentImageCropResult?>(
+      MaterialPageRoute(
+        builder: (_) => DocumentImageCropPage(
+          imageBytes: bytes,
+          title: title,
+          cardAspectRatio: cardAspectRatio,
+          defaultToCardAspect: defaultToCardAspect,
+          allowRetake: true,
+        ),
+      ),
+    );
+
+    if (result is DocumentImageCropRetake) {
+      continue;
+    }
+    if (result is DocumentImageCropConfirmed) {
+      return result.bytes;
+    }
+    return null;
+  }
 }

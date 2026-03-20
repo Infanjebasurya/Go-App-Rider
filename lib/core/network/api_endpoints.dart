@@ -22,4 +22,8 @@ class ApiEndpoints {
   static const String vehicleTypes = '/api/v1/vehicles/types';
   static const String vehicleSelect = '/api/v1/vehicles/select';
   static const String captainProfile = '/v1/captain/profile';
+
+  // Rides / Driver
+  static const String expireRide = '/api/v1/rides/expire';
+  static const String driverStatus = '/api/v1/driver/status';
 }

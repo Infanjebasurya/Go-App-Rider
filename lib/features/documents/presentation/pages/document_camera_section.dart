@@ -54,6 +54,7 @@ void showProfileImageSourceSheet(BuildContext context) {
                   Navigator.of(ctx).pop();
                   context.read<DocumentUploadCubit>().captureProfilePhoto(
                     source: AppImageSource.camera,
+                    context: context,
                   );
                 },
               ),
@@ -64,6 +65,7 @@ void showProfileImageSourceSheet(BuildContext context) {
                   Navigator.of(ctx).pop();
                   context.read<DocumentUploadCubit>().captureProfilePhoto(
                     source: AppImageSource.gallery,
+                    context: context,
                   );
                 },
               ),
@@ -175,6 +177,7 @@ void showBankDocumentSourceSheet(BuildContext context) {
                 Navigator.of(ctx).pop();
                 context.read<DocumentUploadCubit>().captureBankDocument(
                   source: AppImageSource.camera,
+                  context: context,
                 );
               },
             ),
@@ -185,6 +188,7 @@ void showBankDocumentSourceSheet(BuildContext context) {
                 Navigator.of(ctx).pop();
                 context.read<DocumentUploadCubit>().captureBankDocument(
                   source: AppImageSource.gallery,
+                  context: context,
                 );
               },
             ),
